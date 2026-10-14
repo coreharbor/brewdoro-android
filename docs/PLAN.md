@@ -8,13 +8,13 @@
 
 ## 2. Android MVP
 
-- [ ] Gradle wrapper, pinned build toolchain and app manifest.
-- [ ] Pure Kotlin timer, cycle, injectable clocks and tests.
-- [ ] Atomic local persistence and restoration.
-- [ ] Compose cup animation, timer controls, mode selection and settings.
-- [ ] Russian/English resources and basic accessibility.
-- [ ] Alarm scheduling, notification permission/exact-alarm fallback, boot restore.
-- [ ] GitHub Actions tests/lint/debug APK artifact.
+- [x] Gradle wrapper, pinned build toolchain and app manifest.
+- [x] Pure Kotlin timer, cycle, injectable clocks and tests.
+- [x] Atomic local persistence and restoration.
+- [x] Compose cup animation, timer controls, mode selection and settings.
+- [x] Russian/English resources and basic accessibility.
+- [x] Alarm scheduling, notification permission/exact-alarm fallback, boot restore.
+- [x] GitHub Actions tests/lint/debug APK artifact.
 
 ## 3. Verification
 

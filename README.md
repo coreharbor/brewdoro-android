@@ -2,7 +2,7 @@
 
 An offline Pomodoro timer with an animated coffee cup. Android companion to [Brewdoro for Linux](https://github.com/coreharbor/brewdoro), implemented independently in Kotlin and Jetpack Compose.
 
-**Status:** initial Android implementation in progress; no verified APK yet.
+**Status:** Android MVP source implemented; CI build and device validation are pending. Initial artifacts are debug-signed development APKs, not production releases.
 
 ## Scope
 
@@ -19,5 +19,23 @@ Android 8.0 (API 26) or newer. First development version: 0.1.0.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation plan and acceptance gates](docs/PLAN.md)
 - [Privacy](PRIVACY.md)
+- [Real-device testing](docs/DEVICE_TESTING.md)
+- [Production signing](docs/SIGNING.md)
+
+## Build and install
+
+Open the repository in Android Studio, or use JDK 17 and Android SDK platform 35 / build tools 35.0.0:
+
+```sh
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+The APK is `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions produces the same development artifact after successful tests and lint. No SDK or signing keys belong in Git.
+
+## Background timing limitations
+
+The timer uses elapsed-time deadlines, not decrementing UI ticks. Exact background alarms require separate Android access; without it an inexact notification may be delayed. Notifications also require permission on Android 13+. Force-stop and manufacturer power restrictions can prevent delivery. Revoking exact access can cancel alarms until the app is reopened. A crash after recording completion but before posting the notification can lose that notification; it will not double-count the cycle.
+
+No Android 16 device result is claimed until the physical-phone checklist is performed.
 
 MIT licensed. Existing Brewdoro design and behavior are credited to Brewdoro contributors. Android and Linux releases are independent.

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Brewdoro</string>
+    <string name="app_tagline">One cup. One focused session.</string>
+    <string name="notification_channel_name">Session completion</string>
+    <string name="notification_channel_description">Alerts when a focus session or break has finished.</string>
+    <string name="notification_title">Brewdoro · session complete</string>
+    <string name="notification_focus_done">Focus session complete. Take a well-earned break.</string>
+    <string name="notification_break_done">Break complete. Start your next focus session when ready.</string>
+    <string name="notification_open">Open Brewdoro</string>
+    <string name="persistence_error">Could not save the timer. The latest changes were not applied. Please try again.</string>
+    <string name="error_title">Something went wrong</string>
+    <string name="mode_focus">Focus</string>
+    <string name="mode_short_break">Short break</string>
+    <string name="mode_long_break">Long break</string>
+    <string name="mode_title">Session</string>
+    <string name="mode_duration">%1$s · %2$d min</string>
+    <string name="mode_selected_duration">%1$s · %2$d min · selected</string>
+    <string name="mode_locked">Pause keeps this session locked. Reset the timer to choose another mode.</string>
+    <string name="status_idle">Ready when you are</string>
+    <string name="status_running">Session in progress</string>
+    <string name="status_paused">Paused — take your time</string>
+    <string name="status_finished">Session complete</string>
+    <string name="start">Start</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="start_next">Start: %1$s</string>
+    <string name="reset_timer">Reset this timer</string>
+    <string name="reset_timer_hint">Stops and resets this timer. Completed focus sessions are kept.</string>
+    <string name="reset_cycle">Reset full cycle</string>
+    <string name="reset_cycle_title">Start a fresh cycle?</string>
+    <string name="reset_cycle_warning">This stops the current timer, clears completed focus sessions and returns to Focus. Your saved durations are kept.</string>
+    <string name="completed_focus">Completed focus sessions: %1$d</string>
+    <string name="cycle_hint">A long break follows four completed focus sessions.</string>
+    <string name="session_finished">A good moment for a fresh cup</string>
+    <string name="next_session">Next: %1$s. It starts only when you press Start.</string>
+    <string name="timer_digits">%1$02d:%2$02d</string>
+    <string name="timer_description">%1$s, %2$s remaining</string>
+    <string name="cup_description">Coffee cup, %1$d percent of session remaining</string>
+    <string name="settings_locked">Reset the active or paused timer before editing durations.</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_future_only">Durations apply to future sessions. Reset a running or paused timer before editing.</string>
+    <string name="focus_duration">Focus duration (minutes)</string>
+    <string name="short_break_duration">Short break (minutes)</string>
+    <string name="long_break_duration">Long break (minutes)</string>
+    <string name="duration_range">1–180 whole minutes</string>
+    <string name="duration_error">Enter a whole number from 1 to 180.</string>
+    <string name="save_settings">Save durations</string>
+    <string name="cancel">Cancel</string>
+    <string name="alerts_title">Background alerts</string>
+    <string name="notifications_enabled">Notifications are enabled.</string>
+    <string name="notifications_disabled">Notifications are off. You will not receive a session completion alert.</string>
+    <string name="enable_notifications">Enable notifications</string>
+    <string name="exact_alarms_enabled">Precise background alarms are allowed.</string>
+    <string name="exact_alarms_disabled">Precise alarms are not allowed. The timer still works, but background completion alerts may be delayed.</string>
+    <string name="enable_exact_alarms">Allow precise alarms</string>
+    <string name="background_limitations">Force-stopping the app and some battery-saving restrictions can prevent background alerts. Revoking precise-alarm access can cancel pending alarms: reopen the app to restore the timer. System notification and sound settings also apply.</string>
+    <plurals name="minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+</resources>
