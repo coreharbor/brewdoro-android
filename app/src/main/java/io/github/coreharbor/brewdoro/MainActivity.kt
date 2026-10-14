@@ -67,19 +67,19 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 var first = true
                 while (true) {
-                    perform { app.repository.refresh(forceAlarm = first) }
+                    perform(refreshPermissions = first) { app.repository.refresh(forceAlarm = first) }
                     first = false
-                    delay(250)
+                    delay(1000)
                 }
             }
         }
     }
 
     private fun update(operation: () -> TimerView) {
-        lifecycleScope.launch { perform(clearError = true, operation = operation) }
+        lifecycleScope.launch { perform(clearError = true, refreshPermissions = true, operation = operation) }
     }
 
-    private suspend fun perform(clearError: Boolean = false, operation: () -> TimerView) {
+    private suspend fun perform(clearError: Boolean = false, refreshPermissions: Boolean = false, operation: () -> TimerView) {
         operations.withLock {
             try {
                 view = withContext(Dispatchers.IO) { operation() }
@@ -87,8 +87,10 @@ class MainActivity : ComponentActivity() {
             } catch (e: java.io.IOException) {
                 error = getString(R.string.persistence_error)
             }
-            notificationEnabled = app.notifications.enabled()
-            exactEnabled = app.alarms.exactAllowed()
+            if (refreshPermissions) {
+                notificationEnabled = app.notifications.enabled()
+                exactEnabled = app.alarms.exactAllowed()
+            }
         }
     }
 

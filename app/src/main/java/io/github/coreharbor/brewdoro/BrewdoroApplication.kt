@@ -16,9 +16,13 @@ import java.util.UUID
 class BrewdoroApplication : Application() {
     val repository: TimerRepository by lazy {
         TimerRepository(PreferencesSnapshotStore(this), clock, object : TimerEffects {
+            private var lastCancelledGeneration: String? = null
             override fun completed(mode: TimerMode) { notifications.show(mode) }
             override fun synchronize(snapshot: TimerSnapshot, force: Boolean) {
-                if (snapshot.status != TimerStatus.FINISHED) notifications.cancel()
+                if (snapshot.status != TimerStatus.FINISHED && (force || lastCancelledGeneration != snapshot.generation)) {
+                    notifications.cancel()
+                    lastCancelledGeneration = snapshot.generation
+                }
                 alarms.synchronize(snapshot, force)
             }
         })
