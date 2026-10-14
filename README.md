@@ -2,7 +2,9 @@
 
 An offline Pomodoro timer with an animated coffee cup. Android companion to [Brewdoro for Linux](https://github.com/coreharbor/brewdoro), implemented independently in Kotlin and Jetpack Compose.
 
-**Status:** Android MVP source implemented; CI build and device validation are pending. Initial artifacts are debug-signed development APKs, not production releases.
+**Status:** Android MVP built successfully: 70 JVM tests passed, lint has no errors, debug APK assembled. Physical Android 16 testing is pending. This is a debug-signed development preview, not a production release.
+
+[Verification report](docs/VERIFICATION.md) · [Successful CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38641869895)
 
 ## Scope
 

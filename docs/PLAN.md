@@ -18,11 +18,11 @@
 
 ## 3. Verification
 
-- [ ] JVM tests pass: deadline progress, pause/resume, reset, modes, cycles, one-shot completion, restoration, stale generations, delayed callbacks and wall-clock changes.
-- [ ] `lintDebug` passes; no unresolved compilation errors.
-- [ ] `assembleDebug` passes and APK artifact is downloadable for the exact pushed commit.
-- [ ] Source/security review completed; no secrets or network permission.
-- [ ] Document actual verification commands and known limitations.
+- [x] JVM tests pass: deadline progress, pause/resume, reset, modes, cycles, one-shot completion, restoration, stale generations, delayed callbacks and wall-clock changes.
+- [x] `lintDebug` passes; no unresolved compilation errors.
+- [x] `assembleDebug` passes and APK artifact is downloadable for the exact pushed commit.
+- [x] Source/security review completed; no secrets or network permission.
+- [x] Document actual verification commands and known limitations.
 
 ## 4. Real-device gate (must not be claimed from unit tests)
 
