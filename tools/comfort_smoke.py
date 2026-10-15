@@ -103,6 +103,42 @@ try:
     for _ in range(4): adb('shell', 'input', 'keyevent', 'KEYCODE_DEL')
     adb('shell', 'input', 'text', '1')
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')  # Hide the numeric keyboard.
+    # Cross-app picker test runs outside Compose/Espresso so the system owns accessibility normally.
+    def private_state(name):
+        return adb('exec-out', 'run-as', PACKAGE, 'cat', 'shared_prefs/' + name + '.xml')
+    comfort_before = private_state('comfort')
+    timer_before = private_state('timer')
+    tap(find(lambda n: n.get('resource-id', '').split('/')[-1] == 'completion_sound', scroll=True))
+    resolved = adb('shell', 'cmd', 'package', 'resolve-activity', '--brief', '-a', 'android.intent.action.RINGTONE_PICKER').decode()
+    component = [line.strip() for line in resolved.splitlines() if '/' in line][-1]
+    picker_package = component.split('/')[0]
+    deadline = time.monotonic() + 25
+    while time.monotonic() < deadline:
+        picker_tree = tree()
+        if any(n.get('package') == picker_package for n in picker_tree.iter('node')):
+            break
+        time.sleep(.4)
+    else:
+        raise AssertionError(('Actual system ringtone picker never appeared', component))
+    screenshot('system-sound-picker-ru')
+    # First Back may hide a system IME. Only issue another while the exact picker remains visible.
+    for attempt in range(2):
+        adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+        time.sleep(1)
+        returned = tree()
+        if not any(n.get('package') == picker_package for n in returned.iter('node')):
+            break
+    else:
+        raise AssertionError('System picker did not cancel after bounded Back presses')
+    assert any(n.get('package') == PACKAGE for n in returned.iter('node')), 'Did not return to Brewdoro'
+    assert private_state('comfort') == comfort_before, 'Cancelling picker changed comfort preferences'
+    assert private_state('timer') == timer_before, 'Cancelling picker saved unfinished timer draft'
+    draft = find(lambda n: n.get('resource-id', '').split('/')[-1] == 'duration_focus', scroll=True, down=False)
+    assert draft.get('text') == '1', ('Duration draft did not survive picker', draft.attrib)
+    picker_evidence = {'result':'PASS', 'picker':component, 'cancelPreservedComfort':True,
+                       'cancelDidNotSaveTimer':True, 'unsavedFocusDraft':'1',
+                       'source':'actual system picker opened from exact downloadable APK, outside instrumentation'}
+    (OUT / 'sound-picker-evidence.json').write_text(json.dumps(picker_evidence,indent=2)+chr(10))
     tap(text('Сохранить настройки', scroll=True))
     text('Начать')
     # Normal CI tests use reduced motion. Enable system animation only for this actual-APK demo.

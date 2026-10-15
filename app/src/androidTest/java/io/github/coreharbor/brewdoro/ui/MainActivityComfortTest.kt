@@ -134,55 +134,8 @@ class MainActivityComfortTest {
         android.util.Log.i("BrewdoroComfort", "PASS: actual Window FLAG_KEEP_SCREEN_ON focus=true pause/reset/break/background=false reopen/recreate=true")
     }
 
-    @Test fun systemSoundPickerCancelDoesNotChangePreferencesOrTimerDraft() {
-        compose.onNodeWithTag("open_settings").performClick()
-        compose.onNodeWithTag("duration_focus").performScrollTo().performTextReplacement("31")
-        val saved = app.userPreferences.load()
-        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-        // PackageManager queries are filtered on target30+ even when launch itself succeeds.
-        // Resolve as the test shell, without adding package visibility permissions to the app.
-        val resolved = automation.executeShellCommand(
-            "cmd package resolve-activity --brief -a android.intent.action.RINGTONE_PICKER"
-        ).use { descriptor ->
-            java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes().toString(Charsets.UTF_8) }
-        }
-        val pickerPackage = resolved.lineSequence().lastOrNull { it.contains("/") }?.substringBefore("/")?.trim()
-        assertNotNull("System ringtone picker must resolve: $resolved", pickerPackage)
-        fun pickerOwnsWindow(): Boolean {
-            val windows = automation.executeShellCommand("dumpsys window windows").use { descriptor ->
-                java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes().toString(Charsets.UTF_8) }
-            }
-            return windows.lineSequence().any {
-                it.contains("mCurrentFocus=") && it.contains("$pickerPackage/")
-            }
-        }
-        android.util.Log.i("BrewdoroPicker", "Resolved external picker: $resolved")
-        compose.onNodeWithTag("completion_sound").performScrollTo().performClick()
-        compose.waitUntil(20_000) {
-            // A transient launcher/system window and PAUSED caller do not prove picker readiness.
-            pickerOwnsWindow() && scenario.state != Lifecycle.State.RESUMED
-        }
-        automation.waitForIdle(500, 5000)
-        automation.executeShellCommand("input keyevent KEYCODE_BACK").use {
-            java.io.FileInputStream(it.fileDescriptor).use { stream -> stream.readBytes() }
-        }
-        try {
-            compose.waitUntil(5000) { scenario.state == Lifecycle.State.RESUMED }
-        } catch (timeout: androidx.compose.ui.test.ComposeTimeoutException) {
-            // Some system pickers consume the first Back to hide their own IME.
-            // Only back again while that exact resolved picker still owns the window.
-            assertTrue("Only the resolved system picker may receive a second Back", pickerOwnsWindow())
-            automation.executeShellCommand("input keyevent KEYCODE_BACK").use { descriptor ->
-                java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
-            }
-            compose.waitUntil(10_000) { scenario.state == Lifecycle.State.RESUMED }
-        }
-        compose.onNodeWithTag("settings_screen").assertExists()
-        compose.onNodeWithTag("duration_focus").assertTextContains("31")
-        assertEquals(saved, app.userPreferences.load())
-        assertEquals(25, app.repository.peek().snapshot.settings.focusMinutes)
-        android.util.Log.i("BrewdoroComfort", "PASS: actual system ringtone picker cancelled; comfort preference and unsaved timer draft unchanged")
-    }
+    // Cross-app ringtone picker cancellation is exercised by tools/comfort_smoke.py on the
+    // exact distributable APK; do not mix Espresso/Compose accessibility ownership with another app.
 
     @Test fun actualChannelsMatchProfilesAndPreserveExistingSystemOverrides() {
         val manager = context.getSystemService(NotificationManager::class.java)
