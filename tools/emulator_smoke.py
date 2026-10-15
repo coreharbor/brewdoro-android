@@ -35,6 +35,7 @@ def png():
 
 def rotate(landscape):
     adb('shell', 'settings', 'put', 'system', 'user_rotation', '1' if landscape else '0')
+    adb('shell', 'wm', 'user-rotation', 'lock', '1' if landscape else '0')
     deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
         w, h = struct.unpack('>II', png()[16:24])
@@ -43,6 +44,32 @@ def rotate(landscape):
             return
         time.sleep(.3)
     raise AssertionError('Emulator rotation did not settle')
+
+def wait_main(language):
+    """Wait for actual app controls; recover only an emulator System UI dialog, never app ANRs."""
+    label = 'Start' if language == 'en' else 'Начать'
+    deadline = time.monotonic() + 45
+    system_ui_waits = 0
+    while time.monotonic() < deadline:
+        adb('shell', 'uiautomator', 'dump', '/sdcard/brewdoro-ready.xml')
+        xml = adb('exec-out', 'cat', '/sdcard/brewdoro-ready.xml')
+        tree = ET.fromstring(xml)
+        texts = [n.get('text', '') for n in tree.iter('node')]
+        if any(n.get('package') == PACKAGE and n.get('text') == label for n in tree.iter('node')):
+            return
+        if "System UI isn't responding" in texts and system_ui_waits < 2:
+            wait = next(n for n in tree.iter('node') if n.get('text') == 'Wait')
+            x1, y1, x2, y2 = map(int, re.findall('[0-9]+', wait.attrib['bounds']))
+            adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
+            system_ui_waits += 1
+            print('Hosted emulator System UI ANR: chose Wait; app ANRs are NOT dismissed.', flush=True)
+            (OUT / 'emulator-recovery.txt').write_text('System UI ANR after instrumentation; Wait selected. App ANRs are never dismissed.' + chr(10))
+        elif any("isn't responding" in text for text in texts):
+            raise AssertionError(('Unrecovered ANR', texts))
+        time.sleep(.5)
+    (OUT / 'not-ready.xml').write_bytes(xml)
+    (OUT / 'not-ready.png').write_bytes(png())
+    raise AssertionError(('Actual Activity never became ready', language, texts))
 
 def launch():
     adb('shell', 'am', 'force-stop', PACKAGE)
@@ -80,8 +107,12 @@ try:
         for landscape in (False, True):
             rotate(landscape)
             launch()
+            # Locale/Activity relaunch can settle after the first device rotation.
+            rotate(landscape)
+            wait_main(language)
             name = ('main-landscape-' if landscape else 'main-') + language
             tree, size = capture(name)
+            assert (size[0] > size[1]) == landscape, ('Wrong captured orientation', name, size)
             assert_main_visible(tree, size, language)
         if language == 'ru':
             open_settings(tree)
@@ -94,10 +125,15 @@ try:
     adb('shell', 'wm', 'density', '320')
     rotate(True)
     launch()
+    rotate(True)
+    wait_main('ru')
     tree, size = capture('main-landscape-compact-ru')
+    assert size[0] > size[1], ('Wrong compact orientation', size)
     assert_main_visible(tree, size, 'ru')
     adb('shell', 'settings', 'put', 'system', 'font_scale', '1.5')
     launch()
+    rotate(True)
+    wait_main('ru')
     capture('main-landscape-large-font-ru')
     (OUT / 'device.txt').write_text(
         adb('shell', 'getprop', 'ro.build.version.release').decode() +
