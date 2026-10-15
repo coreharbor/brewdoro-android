@@ -14,6 +14,7 @@ import java.io.IOException
 import java.util.UUID
 
 class BrewdoroApplication : Application() {
+    val userPreferences by lazy { io.github.coreharbor.brewdoro.platform.UserPreferencesStore(this) }
     val repository: TimerRepository by lazy {
         TimerRepository(PreferencesSnapshotStore(this), clock, object : TimerEffects {
             override fun completed(mode: TimerMode) { notifications.show(mode) }
@@ -25,7 +26,7 @@ class BrewdoroApplication : Application() {
     }
     val clock: TimerClock by lazy { AndroidTimerClock(this) }
     val alarms: AlarmScheduler by lazy { AlarmScheduler(this) }
-    val notifications: CompletionNotifications by lazy { CompletionNotifications(this) }
+    val notifications: CompletionNotifications by lazy { CompletionNotifications(this) { userPreferences.load() } }
 }
 
 private class PreferencesSnapshotStore(context: Context) : SnapshotStore {

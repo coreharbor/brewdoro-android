@@ -75,4 +75,20 @@
     <string name="cycle_description">Focus and breaks alternate; a long break follows four focus sessions.</string>
     <string name="auto_start_enabled">Auto-start next stage</string>
     <string name="auto_start_description">Continue automatically after each stage. Pause or reset to stop.</string>
+    <string name="comfort_title">Comfort</string>
+    <string name="comfort_live">Saved immediately, independently of timer drafts.</string>
+    <string name="keep_screen_awake">Keep screen awake</string>
+    <string name="keep_screen_description">Only during focus while the app is in the foreground.</string>
+    <string name="completion_sound">Completion sound</string>
+    <string name="sound_default">Default notification sound</string>
+    <string name="sound_silent">Silent</string>
+    <string name="sound_selected">Selected system tone</string>
+    <string name="sound_unavailable">Tone unavailable — using default</string>
+    <string name="sound_picker_unavailable">System sound picker is unavailable.</string>
+    <string name="completion_vibration">Vibration</string>
+    <string name="vibration_system">System default</string>
+    <string name="vibration_off">Off</string>
+    <string name="vibration_short">Short</string>
+    <string name="vibration_double">Double</string>
+    <string name="channel_overrides">Android notification settings and Do Not Disturb take priority. A missing tone falls back to the default.</string>
 </resources>

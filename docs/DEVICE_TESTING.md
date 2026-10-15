@@ -6,6 +6,15 @@ CI compilation, lint and unit tests do **not** prove delivery on a physical phon
 
 Download the debug artifact from a successful Android CI run on GitHub (private repository access required), extract it and install `app-debug.apk`. Allow installation from that specific trusted source when Android asks. This is a development APK, not a store release. Existing installs may require uninstall if a later CI debug key differs; uninstall clears local timer data.
 
+## Comfort and fluid motion (0.1.4 acceptance)
+
+- Select default, silent and a local system notification sound, cancel the picker, reopen/recreate and verify the chosen setting persists. Completion should use that profile; no app sound outside the notification path. System notification/channel overrides and Do Not Disturb remain authoritative. If a chosen tone disappears, verify safe fallback and no crash.
+- Select vibration off/short/double; inspect the selected channel and test actual vibration on a physical phone (the emulator cannot prove tactile output). Deny notifications and verify the timer still advances without an alert or crash.
+- Enable keep-screen-on: only a visible running focus session holds the screen awake. Pause, reset, switch to a break, background or destroy the Activity and verify it clears. Reopen a running focus and verify it resumes only while visible. Default is off; no wake-lock or lock-screen wake behavior.
+- New comfort preferences remain editable during an active timer and do not implicitly save unfinished duration/cycle drafts. Old duration/cycle locks stay intact.
+- Coffee surface subtly flows within the unchanged original cup while a session is running and visible. Empty/full edges stay bounded; focus drains and breaks fill as before. Pause/idle/settings/background stop the animation. Android animation scale0 disables fluid motion. Inspect portrait/landscape and confirm no main-screen clutter.
+- Hosted capture uses the exact downloadable APK after instrumentation: enable system motion for the demo only, configure a one-minute focus through UI, capture real frames/video, compare normalized surface profiles (not just timer draining), and require paused cup pixels to remain identical. No physical audio/vibration/Doze claim from this capture.
+
 ## Tests
 
 - Default focus is 25 min, breaks 5/15; set all to 1 minute for shorter tests.

@@ -34,6 +34,7 @@ class MainActivityAutoCycleTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val app get() = context.applicationContext as BrewdoroApplication
     private var original: TimerSettings? = null
+    private var originalComfort = io.github.coreharbor.brewdoro.domain.UserPreferences()
 
     private fun awaitPrimary(resource: Int) {
         val label = context.getString(resource)
@@ -44,6 +45,9 @@ class MainActivityAutoCycleTest {
 
     @Before fun configureShortCycle() {
         original = app.repository.peek().snapshot.settings
+        originalComfort = app.userPreferences.load()
+        app.userPreferences.save(originalComfort.copy(keepScreenAwake = true))
+        compose.activityRule.scenario.recreate()
         app.repository.resetCycle()
         app.repository.updateSettings(TimerSettings(1, 1, 1, cycleEnabled = true, autoStartEnabled = true))
         assertTrue("CI must allow exact alarms for the actual receiver test", app.alarms.exactAllowed())
@@ -58,6 +62,7 @@ class MainActivityAutoCycleTest {
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         app.repository.resetCycle()
         original?.let { app.repository.updateSettings(it) }
+        app.userPreferences.save(originalComfort)
     }
 
     private fun awaitStage(mode: TimerMode, previousGeneration: String) {
@@ -65,6 +70,16 @@ class MainActivityAutoCycleTest {
             // peek computes remaining but does not reconcile or advance the timer.
             val s = app.repository.peek().snapshot
             s.status == TimerStatus.RUNNING && s.mode == mode && s.generation != previousGeneration
+        }
+    }
+
+    private fun assertScreenFlag(expected: Boolean) {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            var enabled = false
+            compose.activityRule.scenario.onActivity {
+                enabled = it.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0
+            }
+            enabled == expected
         }
     }
 
@@ -81,6 +96,7 @@ class MainActivityAutoCycleTest {
         compose.onNodeWithTag("primary_action").performScrollTo().performClick()
         awaitPrimary(R.string.pause)
         val first = app.repository.peek().snapshot
+        assertScreenFlag(true)
         assertEquals(TimerMode.FOCUS, first.mode)
         assertEquals(TimerStatus.RUNNING, first.status)
 
@@ -98,15 +114,19 @@ class MainActivityAutoCycleTest {
         awaitPrimary(R.string.pause)
         compose.onNodeWithTag("preset_SHORT_BREAK").assertIsSelected().assertIsNotEnabled()
 
+        assertScreenFlag(false)
+
         // Stop Activity (and repeatOnLifecycle UI ticks), without pausing the running session.
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
         assertEquals(Lifecycle.State.CREATED, compose.activityRule.scenario.state)
+        assertScreenFlag(false)
         awaitStage(TimerMode.FOCUS, shortBreak.generation)
         val nextFocus = app.repository.peek().snapshot
         assertEquals(1, nextFocus.completedFocus)
         assertEquals(60_000L, nextFocus.durationMs)
         assertNotNull(nextFocus.deadlineElapsedMs)
         assertNotification(R.string.notification_break_done)
+        assertScreenFlag(false)
         val stored = context.getSharedPreferences("timer", android.content.Context.MODE_PRIVATE).getString("snapshot", null)
         assertEquals("Receiver commits successor before publishing it", nextFocus, SnapshotCodec.decode(stored))
         val evidence = "PASS: real60s focus -> running short break in foreground; real60s short break -> running focus with Activity CREATED. " +
@@ -121,9 +141,12 @@ class MainActivityAutoCycleTest {
             compose.onAllNodes(hasTestTag("preset_FOCUS") and isSelected()).fetchSemanticsNodes().isNotEmpty()
         }
         awaitPrimary(R.string.pause)
+        assertScreenFlag(true)
         compose.onNodeWithTag("primary_action").performScrollTo().performClick()
         awaitPrimary(R.string.resume)
         assertEquals(TimerStatus.PAUSED, app.repository.peek().snapshot.status)
+        assertScreenFlag(false)
+        android.util.Log.i("BrewdoroComfort", "PASS: actual Window screen flag follows real automatic focus-to-break and stopped break-to-focus transitions")
         compose.onNodeWithTag("reset_timer").performScrollTo().performClick()
         awaitPrimary(R.string.start)
         assertEquals(TimerStatus.IDLE, app.repository.peek().snapshot.status)

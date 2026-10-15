@@ -55,7 +55,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.semantics.LiveRegionMode
+import io.github.coreharbor.brewdoro.domain.UserPreferences
+import io.github.coreharbor.brewdoro.domain.CompletionVibration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -77,6 +80,7 @@ import io.github.coreharbor.brewdoro.domain.TimerStatus
 import io.github.coreharbor.brewdoro.domain.coffeeFillFraction
 
 /** Stateless timer callbacks; only navigation, drafts and confirmation live in the UI. */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun BrewdoroApp(
     state: TimerSnapshot,
@@ -93,13 +97,18 @@ fun BrewdoroApp(
     onExactAlarms: () -> Unit,
     error: String? = null,
     onLanguage: (() -> Unit)? = null,
+    preferences: UserPreferences = UserPreferences(),
+    soundLabel: String? = null,
+    onPreferences: (UserPreferences) -> Unit = {},
+    onPickSound: () -> Unit = {},
+    motionActive: Boolean = false,
 ) {
     val canEdit = state.status != TimerStatus.RUNNING && state.status != TimerStatus.PAUSED
     var settingsVisible by rememberSaveable { mutableStateOf(false) }
     var confirmCycleReset by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = settingsVisible && !confirmCycleReset) { settingsVisible = false }
     BrewdoroTheme {
-        Surface(color = LinuxPalette.Background, modifier = Modifier.fillMaxSize()) {
+        Surface(color = LinuxPalette.Background, modifier = Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
             Column(Modifier.fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).imePadding()) {
                 Row(
@@ -127,6 +136,7 @@ fun BrewdoroApp(
                 if (settingsVisible) {
                     SettingsScreen(
                         settings = state.settings, enabled = canEdit,
+                        preferences = preferences, soundLabel = soundLabel, onPreferences = onPreferences, onPickSound = onPickSound,
                         notifications = notificationEnabled, exactAlarms = exactAlarmsEnabled,
                         onNotifications = onNotifications, onExactAlarms = onExactAlarms, onLanguage = onLanguage,
                         onResetCycle = { confirmCycleReset = true },
@@ -135,7 +145,7 @@ fun BrewdoroApp(
                     )
                 } else {
                     MainTimerScreen(state, remainingMs, onStart, onPause, onResetTimer, onMode,
-                        modifier = Modifier.weight(1f))
+                        modifier = Modifier.weight(1f), motionActive = motionActive)
                 }
             }
             if (confirmCycleReset) {
@@ -168,7 +178,7 @@ fun BrewdoroApp(
 @Composable
 private fun MainTimerScreen(
     state: TimerSnapshot, remainingMs: Long, onStart: () -> Unit, onPause: () -> Unit,
-    onResetTimer: () -> Unit, onMode: (TimerMode) -> Unit, modifier: Modifier = Modifier,
+    onResetTimer: () -> Unit, onMode: (TimerMode) -> Unit, modifier: Modifier = Modifier, motionActive: Boolean = false,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth().testTag("minimal_main")) {
         val viewportHeight = maxHeight
@@ -190,7 +200,7 @@ private fun MainTimerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
+                        CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs), animate = motionActive && state.status == TimerStatus.RUNNING)
                     }
                     Column(Modifier.width(296.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         TimerReadout(state, remainingMs, compact = true)
@@ -217,7 +227,7 @@ private fun MainTimerScreen(
                 Column(Modifier.widthIn(max = 296.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     TimerReadout(state, remainingMs)
                     Spacer(Modifier.height(18.dp))
-                    CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
+                    CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs), animate = motionActive && state.status == TimerStatus.RUNNING)
                     Spacer(Modifier.height(26.dp))
                     PrimaryAction(state, onStart, onPause, Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
@@ -320,6 +330,7 @@ private fun ModePicker(state: TimerSnapshot, onMode: (TimerMode) -> Unit) {
 @Composable
 private fun SettingsScreen(
     settings: TimerSettings, enabled: Boolean, notifications: Boolean, exactAlarms: Boolean,
+    preferences: UserPreferences, soundLabel: String?, onPreferences: (UserPreferences) -> Unit, onPickSound: () -> Unit,
     onNotifications: () -> Unit, onExactAlarms: () -> Unit, onLanguage: (() -> Unit)?,
     onResetCycle: () -> Unit, onSave: (TimerSettings) -> Unit, modifier: Modifier = Modifier,
 ) {
@@ -350,6 +361,36 @@ private fun SettingsScreen(
             }, enabled = enabled && valid, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("save_durations")) {
                 Text(stringResource(R.string.save_settings))
             }
+            Text(stringResource(R.string.comfort_title), modifier = Modifier.semantics { heading() }, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.comfort_live), color = LinuxPalette.Muted, style = MaterialTheme.typography.bodySmall)
+            CycleSetting(stringResource(R.string.keep_screen_awake), stringResource(R.string.keep_screen_description),
+                "keep_screen_awake", preferences.keepScreenAwake, true) { onPreferences(preferences.copy(keepScreenAwake = it)) }
+            OutlinedButton(onClick = onPickSound,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("completion_sound")) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.completion_sound))
+                    Text(soundLabel ?: stringResource(R.string.sound_default), style = MaterialTheme.typography.bodySmall,
+                        color = LinuxPalette.Secondary, textAlign = TextAlign.Center)
+                }
+            }
+            Text(stringResource(R.string.completion_vibration), fontWeight = FontWeight.Bold)
+            for (choice in CompletionVibration.entries) {
+                val label = stringResource(when (choice) {
+                    CompletionVibration.SYSTEM -> R.string.vibration_system
+                    CompletionVibration.OFF -> R.string.vibration_off
+                    CompletionVibration.SHORT -> R.string.vibration_short
+                    CompletionVibration.DOUBLE -> R.string.vibration_double
+                })
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("vibration_" + choice.name)
+                    .selectable(selected = preferences.vibration == choice, role = Role.RadioButton,
+                        onClick = { onPreferences(preferences.copy(vibration = choice)) })
+                    .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(selected = preferences.vibration == choice, onClick = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(label)
+                }
+            }
+            Text(stringResource(R.string.channel_overrides), color = LinuxPalette.Muted, style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.alerts_title), modifier = Modifier.semantics { heading() }, fontWeight = FontWeight.Bold)
             Text(stringResource(if (notifications) R.string.notifications_enabled else R.string.notifications_disabled),
                 color = LinuxPalette.Secondary, style = MaterialTheme.typography.bodySmall)

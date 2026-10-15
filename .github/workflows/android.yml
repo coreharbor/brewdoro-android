@@ -122,6 +122,8 @@ jobs:
           path: verified-apk
       - name: Compile instrumentation before emulator boot
         run: ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Set up capture image inspection
+        run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
       - name: Enable emulator KVM access
         run: |
           ls -l /dev/kvm

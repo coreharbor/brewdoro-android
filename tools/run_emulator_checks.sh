@@ -14,9 +14,20 @@ adb -s emulator-5554 logcat -d -v raw -s BrewdoroAutoCycle:I "*:S" > screenshots
 # adb may still exit zero for shell errors, so validate actual evidence content.
 grep -q "^PASS: real60s focus.*receiver successor persisted.*elapsedMs=" screenshots/auto-cycle-evidence.txt
 evidence_status=$?
+adb -s emulator-5554 logcat -d -v raw -s BrewdoroComfort:I "*:S" > screenshots/comfort-test-evidence.txt
+grep -q "^PASS:" screenshots/comfort-test-evidence.txt
+comfort_status=$?
 python3 tools/emulator_smoke.py
 capture_status=$?
+if [ "$capture_status" -eq 0 ]; then
+  python3 tools/comfort_smoke.py
+  animation_status=$?
+else
+  animation_status=2
+fi
 printf "Instrumentation status: %s; screenshot status: %s\n" "$test_status" "$capture_status"
 if [ "$test_status" -ne 0 ]; then exit "$test_status"; fi
 if [ "$evidence_status" -ne 0 ]; then exit "$evidence_status"; fi
-exit "$capture_status"
+if [ "$comfort_status" -ne 0 ]; then exit "$comfort_status"; fi
+if [ "$capture_status" -ne 0 ]; then exit "$capture_status"; fi
+exit "$animation_status"

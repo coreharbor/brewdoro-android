@@ -79,4 +79,20 @@
     <string name="cycle_description">Работа и перерывы чередуются; после четырёх рабочих сессий — длинный перерыв.</string>
     <string name="auto_start_enabled">Автозапуск этапа</string>
     <string name="auto_start_description">Следующий этап начнётся сам. Пауза или сброс останавливают таймер.</string>
+    <string name="comfort_title">Комфорт</string>
+    <string name="comfort_live">Сохраняется сразу, отдельно от настроек таймера.</string>
+    <string name="keep_screen_awake">Не гасить экран</string>
+    <string name="keep_screen_description">Только во время работы, пока приложение на экране.</string>
+    <string name="completion_sound">Звук завершения</string>
+    <string name="sound_default">Стандартный звук уведомлений</string>
+    <string name="sound_silent">Без звука</string>
+    <string name="sound_selected">Выбранная системная мелодия</string>
+    <string name="sound_unavailable">Мелодия недоступна — стандартный звук</string>
+    <string name="sound_picker_unavailable">Системный выбор звука недоступен.</string>
+    <string name="completion_vibration">Вибрация</string>
+    <string name="vibration_system">Как в системе</string>
+    <string name="vibration_off">Выключена</string>
+    <string name="vibration_short">Короткая</string>
+    <string name="vibration_double">Двойная</string>
+    <string name="channel_overrides">Настройки уведомлений Android и режим «Не беспокоить» имеют приоритет. Если мелодия недоступна, используется стандартный звук.</string>
 </resources>
