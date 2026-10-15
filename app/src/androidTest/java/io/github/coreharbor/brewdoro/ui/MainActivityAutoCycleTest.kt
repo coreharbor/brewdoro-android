@@ -109,10 +109,12 @@ class MainActivityAutoCycleTest {
         assertNotification(R.string.notification_break_done)
         val stored = context.getSharedPreferences("timer", android.content.Context.MODE_PRIVATE).getString("snapshot", null)
         assertEquals("Receiver commits successor before publishing it", nextFocus, SnapshotCodec.decode(stored))
-        File(context.filesDir, "auto-cycle-evidence.txt").writeText(
-            "PASS: real60s focus -> running short break in foreground; real60s short break -> running focus with Activity CREATED. " +
-                "No refresh in poll, no manual next-stage tap. Both notifications observed; receiver successor persisted. " +
-                "elapsedMs=" + (SystemClock.elapsedRealtime() - started))
+        val evidence = "PASS: real60s focus -> running short break in foreground; real60s short break -> running focus with Activity CREATED. " +
+            "No refresh in poll, no manual next-stage tap. Both notifications observed; receiver successor persisted. " +
+            "elapsedMs=" + (SystemClock.elapsedRealtime() - started)
+        File(context.filesDir, "auto-cycle-evidence.txt").writeText(evidence)
+        // UTP uninstalls the app after the suite: retain independently retrievable evidence.
+        android.util.Log.i("BrewdoroAutoCycle", evidence)
 
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         compose.waitUntil(timeoutMillis = 10_000) {
