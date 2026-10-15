@@ -2,13 +2,17 @@
 
 An offline Pomodoro timer with an animated coffee cup. Android companion to [Brewdoro for Linux](https://github.com/coreharbor/brewdoro), implemented independently in Kotlin and Jetpack Compose.
 
-**Status:** Linux-style Android preview 0.1.1: 74 JVM tests and 6 UI tests pass, lint has no errors, APK signature verified. Real screenshots and UI smoke checks run on an Android 16/API36 emulator; physical-phone background validation is still pending. Debug-signed development preview, not a production release.
+**Status:** Linux-style Android preview 0.1.2 with adaptive landscape: 74 JVM tests and 12 UI tests pass, lint has no errors, APK signature verified. Real screenshots and UI smoke checks run on an Android 16/API36 emulator; physical-phone background validation is still pending. Debug-signed development preview, not a production release.
 
-[Verification report](docs/VERIFICATION.md) · [Successful CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38692441387) · [Linux parity criteria](docs/LINUX_PARITY.md)
+[Verification report](docs/VERIFICATION.md) · [Successful CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38712263952) · [Linux parity criteria](docs/LINUX_PARITY.md)
 
 <img src="docs/images/android-linux-main-ru.png" alt="Actual Android16 emulator screenshot of the minimal Linux-style Brewdoro main screen" width="280">
 
-**Updating the first preview:** uninstall the initial 0.1.0 test build before installing 0.1.1, because their debug signing certificates differ. Local timer/settings are cleared on uninstall.
+<img src="docs/images/android-landscape-ru.png" alt="Actual verified Android16 landscape screen: original cup left, timer and controls right" width="640">
+
+Landscape adapts to available space; normal-font controls fit without scrolling even at640x360dp. Very short windows/large fonts have scroll fallback with full-width action labels. Rotation/recreation retains running/paused sessions and settings drafts.
+
+**Updating older previews:** uninstall 0.1.0/0.1.1 before installing 0.1.2, because their debug signing certificates differ. Local timer/settings are cleared on uninstall.
 
 ## Scope
 

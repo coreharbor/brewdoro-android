@@ -1,3 +1,19 @@
+# Landscape preview 0.1.2 verification
+
+- Source: `e802c01965ba94df96bc75f3acdade2095a2873f`. [Full passing CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38712263952).
+- 74/74 JVM and 12/12 instrumentation tests passed; zero failures, errors or skips. Android16/API36 Pixel5-profile emulator.
+- Lint: 0 errors/fatal issues, 37 non-fatal warnings. APK assembled; official Android build-tools apksigner verifies v2 signature, one RSA2048 debug signer.
+- APK bytes: 10,215,242. SHA256: `7f706dcf3feaceb8a22ff7d3ee4ea3afb271b9eed3136703085da8688b6b37f9`. Local APK ZIP integrity and CI checksum match verified.
+- Certificate SHA256: `e6b03a08d25129fb4f109293a9f543475538966689622e8912b26e77d8eb2518`. Different from0.1.1 (`1b92f9753814298ed521ed23283d75f2288fac2a3fa2e175a431122e46f31950`); uninstall the older test build first, losing local settings/session. Stable production signing remains an open separate task.
+- Manifest: io.github.coreharbor.brewdoro, versionName0.1.2/versionCode3, min26/target35.
+- Actual verified downloadable APK was reinstalled after instrumentation, not a separately rebuilt test app. EN/RU portrait1080x2340 and landscape2340x1080 screenshots captured. Additional RU compact landscape1280x720 at density320 (=640x360dp) and font1.5 initial/scrolled; settings in both orientations. Orientation dimensions and initial normal-font control visibility asserted. Screenshots visually inspected; normal and compact landscape fit cup/readout/primary/reset/presets without scrolling. Large-font buttons now use full-width stacked actions, preventing broken Russian Reset labels; scrolling brings the controls fully into view. Portrait appearance retained.
+- Deterministic Compose tests cover zero scroll range and unclipped bounds at760x320dp, short760x220 and font2 overflow. Real MainActivity orientation/recreate tests retain running generation/deadlines, exact paused snapshot, settings route and unsaved duration drafts. Domain/persistence/alarms/notifications code unchanged.
+- Earlier verification attempts exposed an injected Back-before-composition race (test synchronized to committed settings route), emulator SystemUI/PixelLauncher ANR dialogs (explicit limited Wait for those components only, never application ANRs), and a test-only unsupported DpRect.width API (fixed to edge difference). Final complete run passed; no emulator recovery file was produced in final artifact.
+- Screenshot inspection additionally caught broken large-font reset wrapping and a mislabeled portrait capture after locale relaunch; fixed action layout and enforced post-launch rotation/dimension checks before final passing run.
+- Physical-phone background/OEM behavior is not implied by emulator success. User confirmed0.1.1 Linux visual fidelity and reported landscape overflow; this preview is ready for their landscape retest.
+
+---
+
 # Linux-style preview 0.1.1 verification
 
 - Verified source: `5252dd46ec9cb4ebf95375beb7e289e77d61a7a2`. [Successful complete CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38692441387).
