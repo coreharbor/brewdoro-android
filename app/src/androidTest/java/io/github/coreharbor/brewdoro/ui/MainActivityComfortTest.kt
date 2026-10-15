@@ -41,6 +41,12 @@ class MainActivityComfortTest {
         awaitPrimary(R.string.start)
     }
     @After fun clean() {
+        // A failed external-picker assertion must not be replaced by a cleanup lifecycle error.
+        if (scenario.state != Lifecycle.State.RESUMED) {
+            context.startActivity(android.content.Intent(context, MainActivity::class.java).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            })
+        }
         scenario.moveToState(Lifecycle.State.RESUMED)
         app.repository.resetCycle()
         app.repository.updateSettings(originalSettings)
@@ -133,11 +139,16 @@ class MainActivityComfortTest {
         compose.onNodeWithTag("duration_focus").performScrollTo().performTextReplacement("31")
         val saved = app.userPreferences.load()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val pickerPackage = android.content.Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+            .resolveActivity(context.packageManager)?.packageName
+        assertNotNull("System ringtone picker must resolve", pickerPackage)
         compose.onNodeWithTag("completion_sound").performScrollTo().performClick()
-        compose.waitUntil(10_000) {
-            val pkg = automation.rootInActiveWindow?.packageName?.toString()
-            pkg != null && pkg != context.packageName && scenario.state != Lifecycle.State.RESUMED
+        compose.waitUntil(20_000) {
+            // A transient launcher/system window and PAUSED caller do not prove picker readiness.
+            automation.rootInActiveWindow?.packageName?.toString() == pickerPackage &&
+                scenario.state != Lifecycle.State.RESUMED
         }
+        automation.waitForIdle(500, 5000)
         automation.executeShellCommand("input keyevent KEYCODE_BACK").use {
             java.io.FileInputStream(it.fileDescriptor).use { stream -> stream.readBytes() }
         }

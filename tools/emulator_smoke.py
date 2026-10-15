@@ -57,7 +57,7 @@ def wait_main(language):
         texts = [n.get('text', '') for n in tree.iter('node')]
         if any(n.get('package') == PACKAGE and n.get('text') == label for n in tree.iter('node')):
             return
-        system_dialog = next((t for t in texts if t in ("System UI isn't responding", "Pixel Launcher isn't responding")), None)
+        system_dialog = next((t for t in texts if t in ("System UI isn't responding", "Pixel Launcher isn't responding", "Process system isn't responding")), None)
         if system_dialog is not None and system_ui_waits < 2:
             wait = next(n for n in tree.iter('node') if n.get('text') == 'Wait')
             x1, y1, x2, y2 = map(int, re.findall('[0-9]+', wait.attrib['bounds']))
