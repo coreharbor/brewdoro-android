@@ -2,9 +2,13 @@
 
 An offline Pomodoro timer with an animated coffee cup. Android companion to [Brewdoro for Linux](https://github.com/coreharbor/brewdoro), implemented independently in Kotlin and Jetpack Compose.
 
-**Status:** Android MVP built successfully: 70 JVM tests passed, lint has no errors, debug APK assembled. Physical Android 16 testing is pending. This is a debug-signed development preview, not a production release.
+**Status:** Linux-style Android preview 0.1.1: 74 JVM tests and 6 UI tests pass, lint has no errors, APK signature verified. Real screenshots and UI smoke checks run on an Android 16/API36 emulator; physical-phone background validation is still pending. Debug-signed development preview, not a production release.
 
-[Verification report](docs/VERIFICATION.md) · [Successful CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38641869895)
+[Verification report](docs/VERIFICATION.md) · [Successful CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38692441387) · [Linux parity criteria](docs/LINUX_PARITY.md)
+
+<img src="docs/images/android-linux-main-ru.png" alt="Actual Android16 emulator screenshot of the minimal Linux-style Brewdoro main screen" width="280">
+
+**Updating the first preview:** uninstall the initial 0.1.0 test build before installing 0.1.1, because their debug signing certificates differ. Local timer/settings are cleared on uninstall.
 
 ## Scope
 

@@ -20,7 +20,7 @@ Use exact alarms only where permitted. Request `SCHEDULE_EXACT_ALARM` special ac
 
 Receivers must validate current session/generation and deadline, complete idempotently, persist before notifying, and never launch an activity on completion. Notification channel uses system notification sound; no full-screen intent, wake lock or ongoing service needed. Reboot/package-replaced handling reschedules a persisted active timer or reconciles an expired one. Force-stop and OEM power management cannot be defeated; document this limitation.
 
-Foreground UI ticks exist only to redraw visible remaining time; stop ticking while not started. Small settings screen, dark coffee-colored theme, responsive/scrollable layout, accessible buttons/content descriptions, large-font support, drawable cup in Compose Canvas. Russian and English string resources, system-selected language.
+Foreground UI ticks exist only to redraw visible remaining time; stop ticking while not started. Small settings screen behind the gear, exact Linux navy/lavender CSS palette and original 136x86 cup geometry (no invented coffee-colored Material dashboard), responsive/scrollable layout, accessible buttons/content descriptions, large-font support, drawable cup in Compose Canvas. Russian and English string resources, system-selected language.
 
 ## Build, tests and supply chain
 
