@@ -123,11 +123,12 @@ jobs:
           arch: x86_64
           profile: pixel_5
           ram-size: 2048M
+          disk-size: 4096M
           cores: 2
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics -camera-back none -camera-front none
           disable-animations: true
-          script: |
-            ./gradlew --no-daemon --max-workers=2 :app:connectedDebugAndroidTest
-            python3 tools/emulator_smoke.py
+          script: bash tools/run_emulator_checks.sh
       - name: Save UI results and screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -18,7 +18,8 @@ def adb(*args):
 
 assert adb('shell', 'getprop', 'ro.kernel.qemu').decode().strip() == '1', 'Not an emulator'
 # Replace the instrumented test install with the exact verified release artifact.
-adb('uninstall', PACKAGE)
+if ('package:' + PACKAGE) in adb('shell', 'pm', 'list', 'packages', PACKAGE).decode().splitlines():
+    adb('uninstall', PACKAGE)
 adb('install', '--no-streaming', 'verified-apk/app-debug.apk')
 adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
 adb('shell', 'wm', 'dismiss-keyguard')
