@@ -1,3 +1,18 @@
+# Comfort and fluid-coffee preview 0.1.4 verification
+
+- Verified source: `a7d36f540769d0c98cf1775071e70b33e1467fab`. [Full successful CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38748155393).
+- 122/122 JVM and19/19 Android16/API36 instrumentation tests: zero failures/errors/skips. Lint: zero errors/fatal,43warnings,1information. Instrumentation compiled before emulator boot. Official apksigner verified v2 with one RSA2048 debug signer.
+- APK10,258,090bytes; SHA256 `46fd8bacae447eb73c9b1279309e128bb0a4e771c4c55df91bebdb6e919455d4`; downloaded checksum and ZIP CRC verified. Manifest versionName0.1.4/versionCode5,min26/target35. VIBRATE added; no storage/network/wake-lock permission.
+- Certificate SHA256 `0bcd5ad0e6bd8a905bc42f9b0bf854cf417cadfb69a98699560f0c7c8f684132` differs from0.1.3 (`60fa7b7f6730222d6033bd1bb0ee78f468de04a411365f0e8b6b87725163f66e`): uninstall previous preview, losing local preferences/session. Production signing remains separate.
+- Independent persisted comfort model/store leaves timer V1/V2 snapshots and unsaved timer/cycle drafts intact. Live comfort changes remain available during active/paused sessions. Rotation persistence, actual selected-profile channels, default/silent/local URI configuration, off/short/double vibration and missing-tone fallback passed. Existing channels/overrides are not mutated/deleted. System/DND overrides remain authoritative.
+- Actual Activity Window flag verified: visible running focus ON when opted in; pause/reset/break/background OFF; resume/recreation restores only when applicable. Existing real60s +60s foreground/background cycle test passed, including automatic screen-flag changes; elapsedMs120104. No background wake lock.
+- Real Canvas captures with fixed midlevel/manual Compose clock changed356pixels; inactive and system-scale-zero captures static. Actual downloadable APK separately reinstalled after instrumentation: original EN/RU portrait/landscape, compact640x360dp and large-font layout checks passed. Comfort/vibration settings and system picker screenshots visually inspected.
+- Cross-app picker cancellation tested outside Compose/Espresso on the exact APK: actual Google system picker appeared, Back cancelled it, comfort/timer persisted state unchanged, unfinished1minute focus draft retained. This is an additional hosted assertion, not counted as an instrumentation test. Earlier mixed-framework attempts exposed external accessibility/focus/IME synchronization failures; test moved to the external real-APK harness without dropping the substantive cancellation/persistence assertions. Duration focus is now cleared before picker launch to prevent keyboard leakage.
+- Actual6s MP4 plus8real screenshot frames retained. Coffee surface profile comparison subtracts mean vertical height, so ordinary draining alone cannot satisfy the gate: residual3.92px; surface variation3-4px; paused cup frames pixel-identical. GIF is cropped/resized actual screencaps, not a synthetic rendering. Small wave remains within original136x86 outline and original palette.
+- Final run produced no emulator-recovery record. Earlier known hosted-system ANR recovery was restricted to specifically observed SystemUI/PixelLauncher/Process system dialogs and recorded; app ANRs never dismissed. APK/UI tests do not prove physical sound/vibration or OEM/Doze delivery. These remain user-phone checks.
+
+---
+
 # Automatic-cycle preview 0.1.3 verification
 
 - Verified source: `72a255e8c94223f68e6a971a9824bd8332f48aa5`. [Full passing CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38720137951).
