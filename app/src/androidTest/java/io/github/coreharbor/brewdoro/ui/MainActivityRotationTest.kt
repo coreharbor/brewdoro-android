@@ -177,6 +177,10 @@ class MainActivityRotationTest {
         compose.waitUntil(timeoutMillis = 10_000) { snapshot().settings == TimerSettings(30, 7, 20) }
         compose.onNodeWithTag("preset_FOCUS").assertTextContains("30", substring = true)
         compose.onNodeWithTag("open_settings").performClick()
+        // Deliver Back only after the new route (and its BackHandler effect) has committed.
+        // A raw Activity callback immediately after injected touch can otherwise beat composition.
+        compose.onNodeWithTag("settings_screen").assertIsDisplayed()
+        compose.waitForIdle()
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.onNodeWithTag("settings_screen").assertDoesNotExist()
         recreate()
