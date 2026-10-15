@@ -139,9 +139,15 @@ class MainActivityComfortTest {
         compose.onNodeWithTag("duration_focus").performScrollTo().performTextReplacement("31")
         val saved = app.userPreferences.load()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-        val pickerPackage = android.content.Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
-            .resolveActivity(context.packageManager)?.packageName
-        assertNotNull("System ringtone picker must resolve", pickerPackage)
+        // PackageManager queries are filtered on target30+ even when launch itself succeeds.
+        // Resolve as the test shell, without adding package visibility permissions to the app.
+        val resolved = automation.executeShellCommand(
+            "cmd package resolve-activity --brief -a android.intent.action.RINGTONE_PICKER"
+        ).use { descriptor ->
+            java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes().toString(Charsets.UTF_8) }
+        }
+        val pickerPackage = resolved.lineSequence().lastOrNull { it.contains("/") }?.substringBefore("/")?.trim()
+        assertNotNull("System ringtone picker must resolve: $resolved", pickerPackage)
         compose.onNodeWithTag("completion_sound").performScrollTo().performClick()
         compose.waitUntil(20_000) {
             // A transient launcher/system window and PAUSED caller do not prove picker readiness.
