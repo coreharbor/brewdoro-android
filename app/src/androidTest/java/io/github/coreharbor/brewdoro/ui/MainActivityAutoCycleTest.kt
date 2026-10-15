@@ -90,6 +90,11 @@ class MainActivityAutoCycleTest {
         assertEquals(60_000L, shortBreak.durationMs)
         assertNotNull(shortBreak.deadlineElapsedMs)
         assertNotification(R.string.notification_focus_done)
+        // Repository/receiver commit can precede the next one-second Activity refresh.
+        // Pause is already visible on the old running phase, so await actual successor semantics.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodes(hasTestTag("preset_SHORT_BREAK") and isSelected()).fetchSemanticsNodes().isNotEmpty()
+        }
         awaitPrimary(R.string.pause)
         compose.onNodeWithTag("preset_SHORT_BREAK").assertIsSelected().assertIsNotEnabled()
 
@@ -110,6 +115,9 @@ class MainActivityAutoCycleTest {
                 "elapsedMs=" + (SystemClock.elapsedRealtime() - started))
 
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodes(hasTestTag("preset_FOCUS") and isSelected()).fetchSemanticsNodes().isNotEmpty()
+        }
         awaitPrimary(R.string.pause)
         compose.onNodeWithTag("primary_action").performScrollTo().performClick()
         awaitPrimary(R.string.resume)
