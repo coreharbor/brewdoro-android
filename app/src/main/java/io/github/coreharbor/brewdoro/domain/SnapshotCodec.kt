@@ -12,10 +12,12 @@ object SnapshotCodec {
     fun encode(s: TimerSnapshot): String {
         val bytes = ByteArrayOutputStream()
         DataOutputStream(bytes).use { out ->
-            out.writeInt(1)
+            out.writeInt(2)
             out.writeInt(s.settings.focusMinutes)
             out.writeInt(s.settings.shortBreakMinutes)
             out.writeInt(s.settings.longBreakMinutes)
+            out.writeBoolean(s.settings.cycleEnabled)
+            out.writeBoolean(s.settings.autoStartEnabled)
             out.writeUTF(s.mode.name)
             out.writeUTF(s.status.name)
             out.writeLong(s.durationMs)
@@ -30,12 +32,26 @@ object SnapshotCodec {
         return Base64.getEncoder().encodeToString(bytes.toByteArray())
     }
 
+    private fun DataInputStream.readStrictBoolean(): Boolean {
+        val value = readUnsignedByte()
+        require(value == 0 || value == 1)
+        return value == 1
+    }
+
     fun decode(encoded: String?): TimerSnapshot? {
         if (encoded == null || encoded.length > 4096) return null
         return try {
             DataInputStream(ByteArrayInputStream(Base64.getDecoder().decode(encoded))).use { input ->
-                require(input.readInt() == 1)
-                val settings = TimerSettings(input.readInt(), input.readInt(), input.readInt())
+                val version = input.readInt()
+                require(version in 1..2)
+                val focus = input.readInt()
+                val short = input.readInt()
+                val long = input.readInt()
+                // V1 retains every session field and opts into the requested Android
+                // defaults. Do not synthesize a completion or discard an active timer.
+                val settings = TimerSettings(focus, short, long,
+                    if (version == 2) input.readStrictBoolean() else true,
+                    if (version == 2) input.readStrictBoolean() else true)
                 val mode = TimerMode.valueOf(input.readUTF())
                 val status = TimerStatus.valueOf(input.readUTF())
                 val duration = input.readLong()

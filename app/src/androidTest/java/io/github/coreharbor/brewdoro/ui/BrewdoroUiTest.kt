@@ -97,8 +97,8 @@ class BrewdoroUiTest {
         val idle = TimerSnapshot()
         val running = engine.start(idle, now).snapshot
         val paused = engine.pause(running, now).snapshot
-        val finished = engine.reconcile(running,
-            now.copy(wallMs = now.wallMs + idle.durationMs, elapsedMs = now.elapsedMs + idle.durationMs)).snapshot
+        val finished = idle.copy(status = TimerStatus.FINISHED, remainingMs = 0, completedFocus = 1,
+            nextMode = TimerMode.SHORT_BREAK) // Legacy finished snapshot remains renderable.
         val shortBreak = engine.selectMode(idle, TimerMode.SHORT_BREAK, now).snapshot
         val longBreak = engine.selectMode(idle, TimerMode.LONG_BREAK, now).snapshot
         for (snapshot in listOf(idle, running, paused, finished, shortBreak, longBreak)) {
@@ -210,7 +210,7 @@ class BrewdoroUiTest {
         compose.onNodeWithTag("open_settings").assertIsEnabled().performClick()
         compose.onNodeWithTag("settings_screen").assertIsDisplayed()
         compose.onNodeWithTag("minimal_main").assertDoesNotExist()
-        for (tag in listOf("duration_focus", "duration_short", "duration_long", "save_durations")) {
+        for (tag in listOf("duration_focus", "duration_short", "duration_long", "cycle_enabled", "auto_start_enabled", "save_durations")) {
             compose.onNodeWithTag(tag).assertIsNotEnabled()
         }
         compose.onNodeWithTag("notification_settings").performScrollTo().assertIsEnabled().performClick()
@@ -228,6 +228,40 @@ class BrewdoroUiTest {
         compose.onNodeWithTag("close_settings").performClick()
         compose.onNodeWithTag("minimal_main").assertIsDisplayed()
         compose.onNodeWithTag("notification_settings").assertDoesNotExist()
+    }
+
+    @Test fun cycleAndAutostartSettingsDefaultOnPersistAndRespectDependency() {
+        launch()
+        compose.onNodeWithTag("open_settings").performClick()
+        compose.onNodeWithTag("cycle_enabled").performScrollTo().assertIsOn()
+        compose.onNodeWithTag("auto_start_enabled").performScrollTo().assertIsOn().performClick().assertIsOff()
+        compose.onNodeWithTag("save_durations").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(state.settings.cycleEnabled); assertTrue(!state.settings.autoStartEnabled) }
+        compose.onNodeWithTag("open_settings").performClick()
+        compose.onNodeWithTag("auto_start_enabled").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("cycle_enabled").performScrollTo().performClick().assertIsOff()
+        compose.onNodeWithTag("auto_start_enabled").assertIsNotEnabled()
+        compose.onNodeWithTag("save_durations").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(!state.settings.cycleEnabled) }
+        compose.onNodeWithTag("session_label").assertDoesNotExist()
+    }
+
+    @Test fun completionAutomaticallyShowsNextRunningStageWithoutStartTap() {
+        launch()
+        compose.onNodeWithTag("primary_action").performClick()
+        val generation = state.generation
+        compose.runOnIdle {
+            state = engine.reconcile(state, now.copy(wallMs = now.wallMs + state.durationMs,
+                elapsedMs = now.elapsedMs + state.durationMs)).snapshot
+            assertEquals(TimerMode.SHORT_BREAK, state.mode)
+            assertEquals(TimerStatus.RUNNING, state.status)
+            assertEquals(1, state.completedFocus)
+            assertTrue(generation != state.generation)
+        }
+        compose.onNodeWithTag("preset_SHORT_BREAK").assertIsSelected().assertIsNotEnabled()
+        compose.onNodeWithTag("primary_action").assertIsDisplayed()
+        compose.onNodeWithTag("reset_timer").performClick()
+        compose.runOnIdle { assertEquals(TimerStatus.IDLE, state.status) }
     }
 
     @Test fun durationDraftValidationAndSaveUpdatePresets() {

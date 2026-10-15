@@ -123,6 +123,17 @@ try:
             capture('settings-landscape-ru')
             rotate(False)
             capture('settings-ru')
+            # Inspect default cycle/autostart controls in the exact distributable APK.
+            for attempt in range(5):
+                settings_tree, (w, h) = capture('settings-cycle-ru')
+                texts = [n.get('text', '') for n in settings_tree.iter('node')]
+                checked = [n for n in settings_tree.iter('node') if n.get('checkable') == 'true' and n.get('checked') == 'true']
+                if any('Цикл Pomodoro' in t for t in texts) and any('Автозапуск этапа' in t for t in texts) and len(checked) >= 2:
+                    break
+                adb('shell', 'input', 'swipe', str(3*w//4), str(3*h//4), str(3*w//4), str(h//2), '400')
+                time.sleep(.4)
+            else:
+                raise AssertionError('Cycle and autostart must be checked by default in actual APK settings')
 
     # A small 640x360dp landscape display, not merely a big phone rotated.
     adb('shell', 'wm', 'size', '720x1280')

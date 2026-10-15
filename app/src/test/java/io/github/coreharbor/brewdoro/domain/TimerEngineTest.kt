@@ -8,7 +8,7 @@ class TimerEngineTest {
     private var serial = 0
     private val engine = TimerEngine { "generation-" + ++serial }
     private var now = ClockReading(1_000_000, 100_000, "boot-a")
-    private val short = TimerSettings(1, 1, 1)
+    private val short = TimerSettings(1, 1, 1, cycleEnabled = true, autoStartEnabled = false)
     private fun idle(count: Int = 0) = TimerSnapshot(settings = short, completedFocus = count)
     private fun running(count: Int = 0) = engine.start(idle(count), now).snapshot
     private fun advance(ms: Long) { now = now.copy(wallMs = now.wallMs + ms, elapsedMs = now.elapsedMs + ms) }
@@ -50,7 +50,7 @@ class TimerEngineTest {
         val r = engine.reconcile(s, now).snapshot
         assertEquals(45_000L, engine.remaining(r, now))
         advance(45_000)
-        assertEquals(TimerStatus.FINISHED, engine.reconcile(r, now).snapshot.status)
+        assertEquals(TimerStatus.IDLE, engine.reconcile(r, now).snapshot.status)
     }
     @Test fun delayedCallbackCompletesOnlyOneSession() {
         val s = running()
@@ -58,9 +58,9 @@ class TimerEngineTest {
         val r = engine.reconcile(s, now)
         assertEquals(TimerMode.FOCUS, r.completedMode)
         assertEquals(1, r.snapshot.completedFocus)
-        assertEquals(TimerStatus.FINISHED, r.snapshot.status)
-        assertEquals(TimerMode.SHORT_BREAK, r.snapshot.nextMode)
-        assertEquals(0L, engine.remaining(r.snapshot, now))
+        assertEquals(TimerStatus.IDLE, r.snapshot.status)
+        assertEquals(TimerMode.SHORT_BREAK, r.snapshot.mode)
+        assertEquals(60_000L, engine.remaining(r.snapshot, now))
     }
     @Test fun completingAgainIsNoOp() {
         val finished = complete(running())
@@ -79,7 +79,7 @@ class TimerEngineTest {
     @Test fun expiryIsInclusive() {
         val s = running()
         advance(60_000)
-        assertEquals(TimerStatus.FINISHED, engine.alarm(s, s.generation, now).snapshot.status)
+        assertEquals(TimerStatus.IDLE, engine.alarm(s, s.generation, now).snapshot.status)
     }
     @Test fun staleAlarmCannotCompleteOverdueNewGeneration() {
         val old = running()
@@ -112,7 +112,7 @@ class TimerEngineTest {
         val s = running()
         advance(60_000)
         val r = engine.pause(s, now)
-        assertEquals(TimerStatus.FINISHED, r.snapshot.status)
+        assertEquals(TimerStatus.IDLE, r.snapshot.status)
         assertEquals(1, r.snapshot.completedFocus)
         assertEquals(TimerMode.FOCUS, r.completedMode)
     }
@@ -184,24 +184,24 @@ class TimerEngineTest {
     @Test fun fourthFocusOffersLongBreakWithoutStarting() {
         val completed = complete(running(3))
         assertEquals(4, completed.completedFocus)
-        assertEquals(TimerMode.LONG_BREAK, completed.nextMode)
-        assertEquals(TimerStatus.FINISHED, completed.status)
+        assertEquals(TimerMode.LONG_BREAK, completed.mode)
+        assertEquals(TimerStatus.IDLE, completed.status)
         val next = engine.start(completed, now).snapshot
         assertEquals(TimerMode.LONG_BREAK, next.mode)
         assertEquals(TimerStatus.RUNNING, next.status)
         val afterBreak = complete(next)
         assertEquals(0, afterBreak.completedFocus)
-        assertEquals(TimerMode.FOCUS, afterBreak.nextMode)
+        assertEquals(TimerMode.FOCUS, afterBreak.mode)
     }
     @Test fun fourFocusFullCycleWithExplicitBreaks() {
         var s = idle()
         repeat(4) { i ->
             s = complete(engine.start(s, now).snapshot)
             assertEquals(i + 1, s.completedFocus)
-            assertEquals(if (i == 3) TimerMode.LONG_BREAK else TimerMode.SHORT_BREAK, s.nextMode)
+            assertEquals(if (i == 3) TimerMode.LONG_BREAK else TimerMode.SHORT_BREAK, s.mode)
             s = complete(engine.start(s, now).snapshot)
             assertEquals(if (i == 3) 0 else i + 1, s.completedFocus)
-            assertEquals(TimerMode.FOCUS, s.nextMode)
+            assertEquals(TimerMode.FOCUS, s.mode)
         }
     }
     @Test fun rebootRebasesUsingWallAndInvalidatesOldAlarm() {
@@ -219,7 +219,7 @@ class TimerEngineTest {
         val s = running(3)
         now = now.copy(wallMs = now.wallMs + 70_000, elapsedMs = 100, bootId = "boot-b")
         val r = engine.reconcile(s, now)
-        assertEquals(TimerStatus.FINISHED, r.snapshot.status)
+        assertEquals(TimerStatus.IDLE, r.snapshot.status)
         assertEquals(4, r.snapshot.completedFocus)
         assertNull(engine.reconcile(r.snapshot, now).completedMode)
     }
@@ -229,7 +229,7 @@ class TimerEngineTest {
         val r = engine.reconcile(s, now).snapshot
         assertEquals(60_000L, r.remainingMs)
         advance(60_000)
-        assertEquals(TimerStatus.FINISHED, engine.reconcile(r, now).snapshot.status)
+        assertEquals(TimerStatus.IDLE, engine.reconcile(r, now).snapshot.status)
     }
     @Test fun monotonicRegressionFallsBackEvenWithIncorrectBootId() {
         val s = running()
@@ -241,7 +241,7 @@ class TimerEngineTest {
     @Test fun unknownBootNeverBlindlyTrustsMonotonicDeadline() {
         val s = running()
         now = now.copy(wallMs = now.wallMs + 70_000, elapsedMs = 0, bootId = null)
-        assertEquals(TimerStatus.FINISHED, engine.reconcile(s, now).snapshot.status)
+        assertEquals(TimerStatus.IDLE, engine.reconcile(s, now).snapshot.status)
     }
     @Test fun restorationAfterWallCorrectionUsesUpdatedFallback() {
         val s = running()

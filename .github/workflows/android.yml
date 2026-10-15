@@ -40,7 +40,7 @@ jobs:
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
       - name: Run unit tests, lint and assemble APK
-        run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+        run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Verify APK signature and manifest
         run: |
           mkdir -p app/build/reports
@@ -120,6 +120,8 @@ jobs:
         with:
           name: brewdoro-android-debug-${{ github.sha }}
           path: verified-apk
+      - name: Compile instrumentation before emulator boot
+        run: ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Enable emulator KVM access
         run: |
           ls -l /dev/kvm

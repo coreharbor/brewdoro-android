@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
                     notificationEnabled = notificationEnabled,
                     exactAlarmsEnabled = exactEnabled,
                     onStart = { update { app.repository.start() } },
-                    onPause = { update { app.repository.pause() } },
+                    onPause = { update { app.repository.pause(current.snapshot.generation) } },
                     onResetTimer = { update { app.repository.resetTimer() } },
                     onResetCycle = { update { app.repository.resetCycle() } },
                     onMode = { mode -> update { app.repository.selectMode(mode) } },

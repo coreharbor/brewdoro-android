@@ -10,7 +10,10 @@ Download the debug artifact from a successful Android CI run on GitHub (private 
 
 - Default focus is 25 min, breaks 5/15; set all to 1 minute for shorter tests.
 - Verify cup empties during focus and fills during break; pause freezes progress, resume preserves remaining time.
-- Check reset timer versus reset full cycle; manually start next phase, long break after four focus completions.
+- With cycle+autostart enabled (new defaults), first Start initiates focus → short break → focus automatically; fourth focus leads to long break, then focus/count reset. No next-stage Start tap.
+- Disable autostart in gear settings: next mode is selected but idle until Start. Disable cycle: completion stays on the same mode. Preferences survive reopen/rotation.
+- With all durations1minute and notification/exact-alarm access granted, verify at least two automatic transitions, including while backgrounded/screen locked; ensure one completion notification/sound per stage. Delayed delivery starts one fresh next stage, not several fictional catch-up cycles.
+- Pause/reset stops the automatic chain. Verify reset timer versus reset full cycle and no stale completion after reset.
 - Lock screen during focus. With notification permission and exact-alarm access granted, verify completion notification and system sound at expiry.
 - Deny notification permission: timer must still complete safely; status must explain blocked notifications. Grant later and test a new session.
 - Deny exact-alarm access: verify the inexact fallback warning; notification can be delayed in Doze. Grant access, resume the app and test again. Revoke access while active, return to the app and verify safe rescheduling.

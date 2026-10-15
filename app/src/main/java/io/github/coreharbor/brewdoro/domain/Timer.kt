@@ -11,6 +11,8 @@ data class TimerSettings(
     val focusMinutes: Int = 25,
     val shortBreakMinutes: Int = 5,
     val longBreakMinutes: Int = 15,
+    val cycleEnabled: Boolean = true,
+    val autoStartEnabled: Boolean = true,
 ) {
     init {
         require(focusMinutes in 1..180 && shortBreakMinutes in 1..180 && longBreakMinutes in 1..180)
@@ -78,6 +80,13 @@ class TimerEngine(private val newId: () -> String = { UUID.randomUUID().toString
         if (snapshot.status != TimerStatus.RUNNING) return Transition(snapshot)
         val left = remaining(snapshot, now)
         if (left == 0L) {
+            // Linux only updates the cycle when cycling is enabled. A disabled cycle
+            // finishes in place, regardless of the remembered auto-start preference.
+            if (!snapshot.settings.cycleEnabled) {
+                return Transition(snapshot.copy(status = TimerStatus.FINISHED, remainingMs = 0,
+                    nextMode = snapshot.mode, generation = newId(), deadlineElapsedMs = null,
+                    deadlineWallMs = null, bootId = null), snapshot.mode)
+            }
             val count = when (snapshot.mode) {
                 TimerMode.FOCUS -> (snapshot.completedFocus + 1).coerceAtMost(4)
                 TimerMode.LONG_BREAK -> 0
@@ -86,9 +95,13 @@ class TimerEngine(private val newId: () -> String = { UUID.randomUUID().toString
             val next = if (snapshot.mode == TimerMode.FOCUS) {
                 if (count == 4) TimerMode.LONG_BREAK else TimerMode.SHORT_BREAK
             } else TimerMode.FOCUS
-            return Transition(snapshot.copy(status = TimerStatus.FINISHED, remainingMs = 0,
-                completedFocus = count, nextMode = next, deadlineElapsedMs = null,
-                deadlineWallMs = null, bootId = null), snapshot.mode)
+            val selected = idle(snapshot.copy(completedFocus = count), next)
+            // One observed completion, one fresh successor. Never replay missed sessions
+            // or base its deadline on the expired predecessor (including after reboot).
+            val successor = if (snapshot.settings.autoStartEnabled) selected.copy(
+                status = TimerStatus.RUNNING, deadlineElapsedMs = now.elapsedMs + selected.durationMs,
+                deadlineWallMs = now.wallMs + selected.durationMs, bootId = now.bootId) else selected
+            return Transition(successor, snapshot.mode)
         }
         val anchorElapsed = snapshot.deadlineElapsedMs!! - snapshot.remainingMs
         if (now.bootId == null || snapshot.bootId != now.bootId || now.elapsedMs < anchorElapsed) {
@@ -106,8 +119,11 @@ class TimerEngine(private val newId: () -> String = { UUID.randomUUID().toString
     fun start(snapshot: TimerSnapshot, now: ClockReading): Transition {
         val current = reconcile(snapshot, now)
         val s = current.snapshot
-        if (s.status == TimerStatus.RUNNING) return current
-        val mode = if (s.status == TimerStatus.FINISHED) s.nextMode!! else s.mode
+        if (s.status == TimerStatus.RUNNING || current.completedMode != null) return current
+        // V1 FINISHED snapshots already counted their completion; keep them inert on
+        // restore and honor their stored next mode only on an explicit manual start.
+        // Cycle-off completions (including a disabled legacy cycle) restart in place.
+        val mode = if (s.status == TimerStatus.FINISHED && s.settings.cycleEnabled) s.nextMode!! else s.mode
         val duration = if (s.status == TimerStatus.PAUSED) s.durationMs else s.settings.durationMs(mode)
         val left = if (s.status == TimerStatus.PAUSED) s.remainingMs else duration
         return current.copy(snapshot = s.copy(mode = mode, status = TimerStatus.RUNNING,
@@ -118,7 +134,8 @@ class TimerEngine(private val newId: () -> String = { UUID.randomUUID().toString
     fun pause(snapshot: TimerSnapshot, now: ClockReading): Transition {
         val current = reconcile(snapshot, now)
         val s = current.snapshot
-        if (s.status != TimerStatus.RUNNING) return current
+        // A pause at the deadline belongs to the expired phase, not its successor.
+        if (s.status != TimerStatus.RUNNING || current.completedMode != null) return current
         return current.copy(snapshot = s.copy(status = TimerStatus.PAUSED, remainingMs = remaining(s, now),
             deadlineElapsedMs = null, deadlineWallMs = null, bootId = null, generation = newId()))
     }
@@ -140,8 +157,12 @@ class TimerEngine(private val newId: () -> String = { UUID.randomUUID().toString
     }
 
     fun settings(snapshot: TimerSnapshot, settings: TimerSettings, now: ClockReading): Transition {
-        val current = reconcile(snapshot, now)
-        val updated = current.snapshot.copy(settings = settings)
+        // Apply control flags before checking an expired phase: disabling must never
+        // accidentally launch one last successor. Active duration/deadlines stay fixed.
+        val configured = snapshot.copy(settings = settings, completedFocus =
+            if (snapshot.settings.cycleEnabled && !settings.cycleEnabled) 0 else snapshot.completedFocus)
+        val current = reconcile(configured, now)
+        val updated = current.snapshot
         return current.copy(snapshot = if (updated.status == TimerStatus.IDLE) idle(updated, updated.mode) else updated)
     }
 

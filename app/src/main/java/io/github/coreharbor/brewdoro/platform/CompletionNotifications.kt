@@ -47,7 +47,8 @@ class CompletionNotifications(private val context: Context) {
                 R.string.notification_focus_done else R.string.notification_break_done))
             .setContentIntent(open)
             .setAutoCancel(true)
-            .setOnlyAlertOnce(true)
+            // Each call is a new, persisted phase completion, not a progress update.
+            .setOnlyAlertOnce(false)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .build()
         try {

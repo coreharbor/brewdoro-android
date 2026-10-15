@@ -37,7 +37,7 @@
     <string name="timer_digits">%1$02d:%2$02d</string>
     <string name="timer_description">%1$s, %2$s remaining</string>
     <string name="cup_description">Coffee cup, %1$d percent full</string>
-    <string name="settings_locked">Reset the active or paused timer before editing durations.</string>
+    <string name="settings_locked">Reset the active or paused timer before editing timer settings.</string>
     <string name="settings_title">Settings</string>
     <string name="settings_future_only">Durations apply to future sessions. Reset a running or paused timer before editing.</string>
     <string name="focus_duration">Focus duration (minutes)</string>
@@ -45,7 +45,7 @@
     <string name="long_break_duration">Long break (minutes)</string>
     <string name="duration_range">1–180 whole minutes</string>
     <string name="duration_error">Enter a whole number from 1 to 180.</string>
-    <string name="save_settings">Save durations</string>
+    <string name="save_settings">Save settings</string>
     <string name="cancel">Cancel</string>
     <string name="alerts_title">Background alerts</string>
     <string name="notifications_enabled">Notifications are enabled.</string>
@@ -71,4 +71,8 @@
     <string name="notification_settings">Notification settings</string>
     <string name="exact_alarm_settings">Precise alarm settings</string>
     <string name="language_settings">App language</string>
+    <string name="cycle_enabled">Pomodoro cycle</string>
+    <string name="cycle_description">Focus and breaks alternate; a long break follows four focus sessions.</string>
+    <string name="auto_start_enabled">Auto-start next stage</string>
+    <string name="auto_start_description">Continue automatically after each stage. Pause or reset to stop.</string>
 </resources>

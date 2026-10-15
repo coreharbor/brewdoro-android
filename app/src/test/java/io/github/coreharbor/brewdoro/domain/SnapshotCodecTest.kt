@@ -20,8 +20,9 @@ class SnapshotCodecTest {
         roundtrip(engine.pause(running, now.copy(elapsedMs = 65_123, wallMs = 1_015_123)).snapshot)
     }
     @Test fun finishedRoundtripWithCycleAndNextMode() {
-        val running = engine.start(TimerSnapshot(completedFocus = 3), now).snapshot
-        val finished = engine.reconcile(running, now.copy(elapsedMs = 1_550_000, wallMs = 2_500_000)).snapshot
+        // Retain the V1 FINISHED/nextMode invariant for stored legacy sessions.
+        val finished = TimerSnapshot(status = TimerStatus.FINISHED, remainingMs = 0,
+            completedFocus = 4, nextMode = TimerMode.LONG_BREAK)
         assertEquals(TimerMode.LONG_BREAK, finished.nextMode)
         roundtrip(finished)
     }
@@ -40,7 +41,7 @@ class SnapshotCodecTest {
     }
     @Test fun unknownVersionRejected() {
         val bytes = Base64.getDecoder().decode(SnapshotCodec.encode(TimerSnapshot()))
-        bytes[3] = 2
+        bytes[3] = 3
         assertNull(SnapshotCodec.decode(Base64.getEncoder().encodeToString(bytes)))
     }
     @Test fun trailingDataRejected() {

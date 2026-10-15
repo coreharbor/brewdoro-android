@@ -37,7 +37,7 @@
     <string name="timer_digits">%1$02d:%2$02d</string>
     <string name="timer_description">Осталось: %1$s, %2$s</string>
     <string name="cup_description">Чашка кофе заполнена на %1$d процентов</string>
-    <string name="settings_locked">Сбрось активный или приостановленный таймер, чтобы изменить длительность.</string>
+    <string name="settings_locked">Сбрось активный или приостановленный таймер, чтобы изменить настройки таймера.</string>
     <string name="settings_title">Настройки</string>
     <string name="settings_future_only">Длительности применятся к будущим сессиям. Перед изменением сбрось запущенный таймер или таймер на паузе.</string>
     <string name="focus_duration">Работа (минуты)</string>
@@ -45,7 +45,7 @@
     <string name="long_break_duration">Длинный перерыв (минуты)</string>
     <string name="duration_range">От 1 до 180 целых минут</string>
     <string name="duration_error">Введи целое число от 1 до 180.</string>
-    <string name="save_settings">Сохранить длительности</string>
+    <string name="save_settings">Сохранить настройки</string>
     <string name="cancel">Отмена</string>
     <string name="alerts_title">Уведомления в фоне</string>
     <string name="notifications_enabled">Уведомления включены.</string>
@@ -75,4 +75,8 @@
     <string name="notification_settings">Настройки уведомлений</string>
     <string name="exact_alarm_settings">Настройки точных сигналов</string>
     <string name="language_settings">Язык приложения</string>
+    <string name="cycle_enabled">Цикл Pomodoro</string>
+    <string name="cycle_description">Работа и перерывы чередуются; после четырёх рабочих сессий — длинный перерыв.</string>
+    <string name="auto_start_enabled">Автозапуск этапа</string>
+    <string name="auto_start_description">Следующий этап начнётся сам. Пауза или сброс останавливают таймер.</string>
 </resources>

@@ -163,6 +163,8 @@ class MainActivityRotationTest {
         compose.onNodeWithTag("duration_focus").performScrollTo().performTextReplacement("30")
         compose.onNodeWithTag("duration_short").performScrollTo().performTextReplacement("7")
         compose.onNodeWithTag("duration_long").performScrollTo().performTextReplacement("20")
+        compose.onNodeWithTag("auto_start_enabled").performScrollTo().performClick().assertIsOff()
+        compose.onNodeWithTag("cycle_enabled").performScrollTo().performClick().assertIsOff()
         assertEquals("Editing must not implicitly save", saved, snapshot().settings)
 
         rotate(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, Configuration.ORIENTATION_LANDSCAPE)
@@ -174,7 +176,7 @@ class MainActivityRotationTest {
         assertEquals(saved, snapshot().settings)
         compose.onNodeWithTag("save_durations").performScrollTo().performClick()
         awaitPrimary(R.string.start)
-        compose.waitUntil(timeoutMillis = 10_000) { snapshot().settings == TimerSettings(30, 7, 20) }
+        compose.waitUntil(timeoutMillis = 10_000) { snapshot().settings == TimerSettings(30, 7, 20, cycleEnabled = false, autoStartEnabled = false) }
         compose.onNodeWithTag("preset_FOCUS").assertTextContains("30", substring = true)
         compose.onNodeWithTag("open_settings").performClick()
         // Deliver Back only after the new route (and its BackHandler effect) has committed.
@@ -195,6 +197,8 @@ class MainActivityRotationTest {
         compose.onNodeWithTag("duration_focus").assertTextContains("30")
         compose.onNodeWithTag("duration_short").assertTextContains("7")
         compose.onNodeWithTag("duration_long").assertTextContains("20")
+        compose.onNodeWithTag("cycle_enabled").assertIsOff()
+        compose.onNodeWithTag("auto_start_enabled").assertIsOff().assertIsNotEnabled()
         compose.onNodeWithTag("save_durations").assertIsEnabled()
     }
 }

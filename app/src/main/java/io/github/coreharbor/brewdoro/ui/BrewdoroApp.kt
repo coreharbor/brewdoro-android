@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -196,13 +198,13 @@ private fun MainTimerScreen(
                         if (LocalDensity.current.fontScale > 1.2f) {
                             // At accessibility font sizes keep whole RU labels readable rather
                             // than breaking the last letter into a narrow side-by-side button.
-                            PrimaryAction(state.status, onStart, onPause, Modifier.fillMaxWidth())
+                            PrimaryAction(state, onStart, onPause, Modifier.fillMaxWidth())
                             Spacer(Modifier.height(4.dp))
                             ResetAction(onResetTimer, Modifier.fillMaxWidth())
                         } else {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                PrimaryAction(state.status, onStart, onPause, Modifier.weight(1f))
+                                PrimaryAction(state, onStart, onPause, Modifier.weight(1f))
                                 ResetAction(onResetTimer, Modifier.weight(0.65f))
                             }
                         }
@@ -217,7 +219,7 @@ private fun MainTimerScreen(
                     Spacer(Modifier.height(18.dp))
                     CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
                     Spacer(Modifier.height(26.dp))
-                    PrimaryAction(state.status, onStart, onPause, Modifier.fillMaxWidth())
+                    PrimaryAction(state, onStart, onPause, Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
                     ResetAction(onResetTimer)
                     Spacer(Modifier.height(28.dp))
@@ -229,7 +231,8 @@ private fun MainTimerScreen(
 }
 
 @Composable
-private fun PrimaryAction(status: TimerStatus, onStart: () -> Unit, onPause: () -> Unit, modifier: Modifier) {
+private fun PrimaryAction(state: TimerSnapshot, onStart: () -> Unit, onPause: () -> Unit, modifier: Modifier) {
+    val status = state.status
     OutlinedButton(
         onClick = if (status == TimerStatus.RUNNING) onPause else onStart,
         modifier = modifier.heightIn(min = 48.dp).testTag("primary_action"),
@@ -242,7 +245,7 @@ private fun PrimaryAction(status: TimerStatus, onStart: () -> Unit, onPause: () 
         Text(stringResource(when (status) {
             TimerStatus.RUNNING -> R.string.pause
             TimerStatus.PAUSED -> R.string.resume
-            TimerStatus.FINISHED -> R.string.start_next_short
+            TimerStatus.FINISHED -> if (state.settings.cycleEnabled) R.string.start_next_short else R.string.start
             TimerStatus.IDLE -> R.string.start
         }), fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
@@ -266,9 +269,11 @@ private fun TimerReadout(state: TimerSnapshot, remainingMs: Long, compact: Boole
         lineHeight = if (compact) 16.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
         modifier = Modifier.testTag("mode_label"))
     Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
-    Text(stringResource(R.string.session_position, sessionPosition(state)), color = LinuxPalette.Muted,
-        fontSize = 11.sp, lineHeight = if (compact) 16.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
-        modifier = Modifier.testTag("session_label"))
+    if (state.settings.cycleEnabled) {
+        Text(stringResource(R.string.session_position, sessionPosition(state)), color = LinuxPalette.Muted,
+            fontSize = 11.sp, lineHeight = if (compact) 16.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
+            modifier = Modifier.testTag("session_label"))
+    }
     Spacer(Modifier.height(if (compact) 2.dp else 12.dp))
     val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -321,6 +326,8 @@ private fun SettingsScreen(
     var focus by rememberSaveable(settings.focusMinutes) { mutableStateOf(settings.focusMinutes.toString()) }
     var shortBreak by rememberSaveable(settings.shortBreakMinutes) { mutableStateOf(settings.shortBreakMinutes.toString()) }
     var longBreak by rememberSaveable(settings.longBreakMinutes) { mutableStateOf(settings.longBreakMinutes.toString()) }
+    var cycleEnabled by rememberSaveable(settings.cycleEnabled) { mutableStateOf(settings.cycleEnabled) }
+    var autoStartEnabled by rememberSaveable(settings.autoStartEnabled) { mutableStateOf(settings.autoStartEnabled) }
     val focusValue = focus.toIntOrNull()
     val shortValue = shortBreak.toIntOrNull()
     val longValue = longBreak.toIntOrNull()
@@ -333,8 +340,13 @@ private fun SettingsScreen(
             DurationField(stringResource(R.string.focus_duration), "duration_focus", focus, enabled) { focus = it }
             DurationField(stringResource(R.string.short_break_duration), "duration_short", shortBreak, enabled) { shortBreak = it }
             DurationField(stringResource(R.string.long_break_duration), "duration_long", longBreak, enabled) { longBreak = it }
+            CycleSetting(stringResource(R.string.cycle_enabled), stringResource(R.string.cycle_description),
+                "cycle_enabled", cycleEnabled, enabled) { cycleEnabled = it }
+            CycleSetting(stringResource(R.string.auto_start_enabled), stringResource(R.string.auto_start_description),
+                "auto_start_enabled", autoStartEnabled, enabled && cycleEnabled) { autoStartEnabled = it }
             OutlinedButton(onClick = {
-                if (enabled && valid) onSave(TimerSettings(focusValue!!, shortValue!!, longValue!!))
+                if (enabled && valid) onSave(settings.copy(focusMinutes = focusValue!!, shortBreakMinutes = shortValue!!,
+                    longBreakMinutes = longValue!!, cycleEnabled = cycleEnabled, autoStartEnabled = autoStartEnabled))
             }, enabled = enabled && valid, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("save_durations")) {
                 Text(stringResource(R.string.save_settings))
             }
@@ -359,6 +371,20 @@ private fun SettingsScreen(
                 Text(stringResource(R.string.reset_cycle))
             }
         }
+    }
+}
+
+@Composable
+private fun CycleSetting(label: String, description: String, tag: String, checked: Boolean, enabled: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(tag)
+        .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChecked)
+        .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(label, color = if (enabled) LinuxPalette.Text else LinuxPalette.Muted)
+            Text(description, color = LinuxPalette.Muted, style = MaterialTheme.typography.bodySmall)
+        }
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 

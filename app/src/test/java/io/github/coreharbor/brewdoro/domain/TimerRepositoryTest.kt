@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class TimerRepositoryTest {
-    private class MemoryStore(initial: TimerSnapshot? = TimerSnapshot(settings = TimerSettings(1, 1, 1))) : SnapshotStore {
+    private class MemoryStore(initial: TimerSnapshot? = TimerSnapshot(settings = TimerSettings(1, 1, 1, cycleEnabled = true, autoStartEnabled = false))) : SnapshotStore {
         var saved = initial
         var writes = 0
         var fail = false
@@ -31,7 +31,7 @@ class TimerRepositoryTest {
         var scheduled: TimerSnapshot? = null
         var forces = 0
         override fun completed(mode: TimerMode) {
-            assertEquals(TimerStatus.FINISHED, store.saved!!.status)
+            assertEquals(TimerStatus.IDLE, store.saved!!.status)
             completions++
         }
         override fun synchronize(snapshot: TimerSnapshot, force: Boolean) {
@@ -70,7 +70,7 @@ class TimerRepositoryTest {
             tasks.forEach { it.get(5, TimeUnit.SECONDS) }
             assertEquals(1, repo.peek().snapshot.completedFocus)
             assertEquals(1, effects.completions)
-            assertEquals(TimerStatus.FINISHED, store.saved!!.status)
+            assertEquals(TimerStatus.IDLE, store.saved!!.status)
         } finally { pool.shutdownNow() }
     }
     @Test fun alarmPauseAtExpiryRaceStillCountsOnce() {
@@ -84,7 +84,7 @@ class TimerRepositoryTest {
             b.get(5, TimeUnit.SECONDS)
             assertEquals(1, repo.peek().snapshot.completedFocus)
             assertEquals(1, effects.completions)
-            assertEquals(TimerStatus.FINISHED, repo.peek().snapshot.status)
+            assertEquals(TimerStatus.IDLE, repo.peek().snapshot.status)
         } finally { pool.shutdownNow() }
     }
     @Test fun restartAfterReceiverCompletionDoesNotNotifyAgain() {
