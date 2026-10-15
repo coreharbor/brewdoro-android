@@ -158,7 +158,17 @@ class MainActivityComfortTest {
         automation.executeShellCommand("input keyevent KEYCODE_BACK").use {
             java.io.FileInputStream(it.fileDescriptor).use { stream -> stream.readBytes() }
         }
-        compose.waitUntil(10_000) { scenario.state == Lifecycle.State.RESUMED }
+        try {
+            compose.waitUntil(5000) { scenario.state == Lifecycle.State.RESUMED }
+        } catch (timeout: androidx.compose.ui.test.ComposeTimeoutException) {
+            // Some system pickers consume the first Back to hide their own IME.
+            // Only back again while that exact resolved picker still owns the window.
+            assertEquals(pickerPackage, automation.rootInActiveWindow?.packageName?.toString())
+            automation.executeShellCommand("input keyevent KEYCODE_BACK").use { descriptor ->
+                java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
+            }
+            compose.waitUntil(10_000) { scenario.state == Lifecycle.State.RESUMED }
+        }
         compose.onNodeWithTag("settings_screen").assertExists()
         compose.onNodeWithTag("duration_focus").assertTextContains("31")
         assertEquals(saved, app.userPreferences.load())

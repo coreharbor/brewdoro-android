@@ -52,6 +52,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -334,6 +336,8 @@ private fun SettingsScreen(
     onNotifications: () -> Unit, onExactAlarms: () -> Unit, onLanguage: (() -> Unit)?,
     onResetCycle: () -> Unit, onSave: (TimerSettings) -> Unit, modifier: Modifier = Modifier,
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     var focus by rememberSaveable(settings.focusMinutes) { mutableStateOf(settings.focusMinutes.toString()) }
     var shortBreak by rememberSaveable(settings.shortBreakMinutes) { mutableStateOf(settings.shortBreakMinutes.toString()) }
     var longBreak by rememberSaveable(settings.longBreakMinutes) { mutableStateOf(settings.longBreakMinutes.toString()) }
@@ -365,7 +369,12 @@ private fun SettingsScreen(
             Text(stringResource(R.string.comfort_live), color = LinuxPalette.Muted, style = MaterialTheme.typography.bodySmall)
             CycleSetting(stringResource(R.string.keep_screen_awake), stringResource(R.string.keep_screen_description),
                 "keep_screen_awake", preferences.keepScreenAwake, true) { onPreferences(preferences.copy(keepScreenAwake = it)) }
-            OutlinedButton(onClick = onPickSound,
+            OutlinedButton(onClick = {
+                // A focused duration field must not reopen its keyboard over the external picker.
+                focusManager.clearFocus()
+                keyboard?.hide()
+                onPickSound()
+            },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("completion_sound")) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(stringResource(R.string.completion_sound))
