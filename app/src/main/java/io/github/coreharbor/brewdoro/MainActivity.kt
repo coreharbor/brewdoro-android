@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
@@ -42,6 +44,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         app.notifications.ensureChannel()
         view = app.repository.peek()
         setContent {
@@ -60,6 +66,7 @@ class MainActivity : ComponentActivity() {
                     onNotifications = ::requestNotifications,
                     onExactAlarms = ::requestExactAlarms,
                     error = error,
+                    onLanguage = if (Build.VERSION.SDK_INT >= 33) ::requestLanguage else null,
                 )
             }
         }
@@ -111,6 +118,14 @@ class MainActivity : ComponentActivity() {
     private fun requestExactAlarms() {
         if (Build.VERSION.SDK_INT >= 31) {
             openSettings(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+        } else {
+            openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+        }
+    }
+
+    private fun requestLanguage() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            openSettings(Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.parse("package:$packageName")))
         }
     }
 

@@ -3,9 +3,9 @@
     <style name="Theme.Brewdoro" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#171310</item>
-        <item name="android:navigationBarColor">#171310</item>
-        <item name="android:windowBackground">#171310</item>
-        <item name="android:colorAccent">#E9BE91</item>
+        <item name="android:statusBarColor">#1f2335</item>
+        <item name="android:navigationBarColor">#24283b</item>
+        <item name="android:windowBackground">#24283b</item>
+        <item name="android:colorAccent">#7aa2f7</item>
     </style>
 </resources>

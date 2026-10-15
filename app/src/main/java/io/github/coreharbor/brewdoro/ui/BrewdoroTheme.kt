@@ -6,31 +6,50 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val CoffeeColors = darkColorScheme(
-    primary = Color(0xFFE9BE91),
-    onPrimary = Color(0xFF3D2617),
-    primaryContainer = Color(0xFF58402D),
-    onPrimaryContainer = Color(0xFFFFDCB9),
-    secondary = Color(0xFFD4C4AF),
-    onSecondary = Color(0xFF382F23),
-    secondaryContainer = Color(0xFF504637),
-    onSecondaryContainer = Color(0xFFF2E0C9),
-    tertiary = Color(0xFFBFCB9D),
-    onTertiary = Color(0xFF293316),
-    background = Color(0xFF171310),
-    onBackground = Color(0xFFEDE0D6),
-    surface = Color(0xFF211B17),
-    onSurface = Color(0xFFEDE0D6),
-    surfaceVariant = Color(0xFF4C4138),
-    onSurfaceVariant = Color(0xFFD1C3B7),
-    outline = Color(0xFF9D8E80),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
+/** Literal tokens from the Linux app's resources/style.css; never use dynamic colors. */
+internal object LinuxPalette {
+    val Background = Color(0xFF24283B)
+    val Header = Color(0xFF1F2335)
+    val Surface = Color(0xFF292E42)
+    val SurfaceHover = Color(0xFF343A55)
+    val SurfaceActive = Color(0xFF394B70)
+    val Text = Color(0xFFC0CAF5)
+    val Secondary = Color(0xFFA9B1D6)
+    val Muted = Color(0xFF737AA2)
+    val Accent = Color(0xFF3D59A1)
+    val AccentHover = Color(0xFF4D6CB3)
+    val AccentLight = Color(0xFF7AA2F7)
+    val AccentText = Color(0xFFF4F6FF)
+    val Coffee = Color(red = 0.878f, green = 0.686f, blue = 0.408f, alpha = 1f)
+}
+
+private val LinuxColors = darkColorScheme(
+    primary = LinuxPalette.AccentLight,
+    onPrimary = LinuxPalette.Header,
+    primaryContainer = LinuxPalette.Accent,
+    onPrimaryContainer = LinuxPalette.Text,
+    secondary = LinuxPalette.Secondary,
+    onSecondary = LinuxPalette.Background,
+    secondaryContainer = LinuxPalette.SurfaceActive,
+    onSecondaryContainer = LinuxPalette.Text,
+    tertiary = LinuxPalette.AccentLight,
+    onTertiary = LinuxPalette.Header,
+    background = LinuxPalette.Background,
+    onBackground = LinuxPalette.Text,
+    surface = LinuxPalette.Surface,
+    onSurface = LinuxPalette.Text,
+    surfaceVariant = LinuxPalette.SurfaceHover,
+    onSurfaceVariant = LinuxPalette.Secondary,
+    surfaceTint = LinuxPalette.Surface,
+    surfaceContainer = LinuxPalette.Surface,
+    surfaceContainerLow = LinuxPalette.Surface,
+    surfaceContainerHigh = LinuxPalette.Surface,
+    surfaceContainerHighest = LinuxPalette.Surface,
+    outline = LinuxPalette.Muted,
+    outlineVariant = LinuxPalette.Muted,
 )
 
 @Composable
 fun BrewdoroTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = CoffeeColors, content = content)
+    MaterialTheme(colorScheme = LinuxColors, content = content)
 }

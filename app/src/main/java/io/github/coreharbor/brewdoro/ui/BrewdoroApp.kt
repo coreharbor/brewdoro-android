@@ -2,27 +2,37 @@
 package io.github.coreharbor.brewdoro.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,16 +46,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -53,15 +68,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.coreharbor.brewdoro.R
 import io.github.coreharbor.brewdoro.domain.TimerMode
-import io.github.coreharbor.brewdoro.domain.coffeeFillFraction
 import io.github.coreharbor.brewdoro.domain.TimerSettings
 import io.github.coreharbor.brewdoro.domain.TimerSnapshot
 import io.github.coreharbor.brewdoro.domain.TimerStatus
+import io.github.coreharbor.brewdoro.domain.coffeeFillFraction
 
-/**
- * Stateless timer UI: all timer transitions are delegated to the caller.
- * Only navigation, settings drafts, and confirmation visibility are local UI state.
- */
+/** Stateless timer callbacks; only navigation, drafts and confirmation live in the UI. */
 @Composable
 fun BrewdoroApp(
     state: TimerSnapshot,
@@ -77,102 +89,83 @@ fun BrewdoroApp(
     onNotifications: () -> Unit,
     onExactAlarms: () -> Unit,
     error: String? = null,
+    onLanguage: (() -> Unit)? = null,
 ) {
-    val canEditSettings = state.status != TimerStatus.RUNNING && state.status != TimerStatus.PAUSED
+    val canEdit = state.status != TimerStatus.RUNNING && state.status != TimerStatus.PAUSED
     var settingsVisible by rememberSaveable { mutableStateOf(false) }
     var confirmCycleReset by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = settingsVisible) { settingsVisible = false }
+    BackHandler(enabled = settingsVisible && !confirmCycleReset) { settingsVisible = false }
     BrewdoroTheme {
-        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                Column(
-                    modifier = Modifier.widthIn(max = 600.dp).fillMaxSize()
-                        .verticalScroll(rememberScrollState()).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+        Surface(color = LinuxPalette.Background, modifier = Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).imePadding()) {
+                Row(
+                    Modifier.fillMaxWidth().background(LinuxPalette.Header)
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)).padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (error != null) ErrorCard(error)
                     if (settingsVisible) {
-                        SettingsScreen(
-                            settings = state.settings,
-                            enabled = canEditSettings,
-                            onCancel = { settingsVisible = false },
-                            onSave = { onSettings(it); settingsVisible = false },
-                        )
+                        Text(stringResource(R.string.settings_title), fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f).padding(start = 12.dp).semantics { heading() })
+                        TextButton(onClick = { settingsVisible = false }, modifier = Modifier.testTag("close_settings")) {
+                            Text(stringResource(R.string.done), color = LinuxPalette.Secondary)
+                        }
                     } else {
-                        Text(
-                            stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.headlineLarge,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        Text(
-                            stringResource(R.string.app_tagline),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                        TextButton(onClick = { settingsVisible = true }, enabled = canEditSettings) {
-                            Text(stringResource(R.string.settings_title))
+                        IconButton(onClick = { settingsVisible = true }, modifier = Modifier.size(48.dp).testTag("open_settings")) {
+                            Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings_title),
+                                tint = LinuxPalette.Secondary, modifier = Modifier.size(18.dp))
                         }
-                        if (!canEditSettings) {
-                            Text(stringResource(R.string.settings_locked), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                        }
-                        TimerPanel(state, remainingMs)
-                        if (state.status == TimerStatus.FINISHED) {
-                            InfoCard(
-                                stringResource(R.string.session_finished),
-                                stringResource(R.string.next_session, modeLabel(state.nextMode ?: state.mode)),
-                            )
-                        }
-                        Button(
-                            onClick = if (state.status == TimerStatus.RUNNING) onPause else onStart,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                            contentPadding = PaddingValues(16.dp),
+                    }
+                }
+                if (error != null) {
+                    Text(error, color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                }
+                if (settingsVisible) {
+                    SettingsScreen(
+                        settings = state.settings, enabled = canEdit,
+                        notifications = notificationEnabled, exactAlarms = exactAlarmsEnabled,
+                        onNotifications = onNotifications, onExactAlarms = onExactAlarms, onLanguage = onLanguage,
+                        onResetCycle = { confirmCycleReset = true },
+                        onSave = { onSettings(it); settingsVisible = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().testTag("minimal_main")) {
+                        val viewportHeight = maxHeight
+                        Column(
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                                .heightIn(min = viewportHeight).padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
-                            Text(
-                                when (state.status) {
-                                    TimerStatus.RUNNING -> stringResource(R.string.pause)
-                                    TimerStatus.PAUSED -> stringResource(R.string.resume)
-                                    TimerStatus.FINISHED -> stringResource(
-                                        R.string.start_next, modeLabel(state.nextMode ?: state.mode),
-                                    )
-                                    TimerStatus.IDLE -> stringResource(R.string.start)
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                            )
+                            Column(Modifier.widthIn(max = 296.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                                TimerPanel(state, remainingMs)
+                                Spacer(Modifier.height(26.dp))
+                                OutlinedButton(
+                                    onClick = if (state.status == TimerStatus.RUNNING) onPause else onStart,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("primary_action"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, LinuxPalette.AccentLight.copy(alpha = 0.45f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = LinuxPalette.Accent.copy(alpha = 0.28f), contentColor = LinuxPalette.Text),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                ) {
+                                    Text(stringResource(when (state.status) {
+                                        TimerStatus.RUNNING -> R.string.pause
+                                        TimerStatus.PAUSED -> R.string.resume
+                                        TimerStatus.FINISHED -> R.string.start_next_short
+                                        TimerStatus.IDLE -> R.string.start
+                                    }), fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                TextButton(onClick = onResetTimer, modifier = Modifier.heightIn(min = 48.dp).testTag("reset_timer")) {
+                                    Text(stringResource(R.string.reset_short), fontSize = 13.sp, color = LinuxPalette.Muted)
+                                }
+                                Spacer(Modifier.height(28.dp))
+                                ModePicker(state, onMode)
+                            }
                         }
-                        OutlinedButton(
-                            onClick = onResetTimer,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        ) { Text(stringResource(R.string.reset_timer), textAlign = TextAlign.Center) }
-                        Text(
-                            stringResource(R.string.reset_timer_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        ModePicker(state, onMode)
-                        Text(
-                            stringResource(R.string.completed_focus, state.completedFocus),
-                            style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center,
-                        )
-                        Text(
-                            stringResource(R.string.cycle_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                        TextButton(onClick = { confirmCycleReset = true }) {
-                            Text(stringResource(R.string.reset_cycle), textAlign = TextAlign.Center)
-                        }
-                        PermissionCard(
-                            notificationEnabled, exactAlarmsEnabled, onNotifications, onExactAlarms,
-                        )
                     }
                 }
             }
@@ -180,22 +173,19 @@ fun BrewdoroApp(
                 AlertDialog(
                     onDismissRequest = { confirmCycleReset = false },
                     title = { Text(stringResource(R.string.reset_cycle_title)) },
-                    text = {
-                        Text(
-                            stringResource(R.string.reset_cycle_warning),
-                            modifier = Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState()),
-                        )
-                    },
+                    text = { Text(stringResource(R.string.reset_cycle_warning),
+                        modifier = Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) },
                     confirmButton = {
-                        TextButton(onClick = { confirmCycleReset = false; onResetCycle() }) {
+                        TextButton(onClick = { confirmCycleReset = false; onResetCycle() }, modifier = Modifier.testTag("confirm_reset_cycle")) {
                             Text(stringResource(R.string.reset_cycle))
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { confirmCycleReset = false }) {
+                        TextButton(onClick = { confirmCycleReset = false }, modifier = Modifier.testTag("cancel_reset_cycle")) {
                             Text(stringResource(R.string.cancel))
                         }
                     },
+                    modifier = Modifier.testTag("cycle_confirmation"),
                 )
             }
         }
@@ -204,198 +194,124 @@ fun BrewdoroApp(
 
 @Composable
 private fun TimerPanel(state: TimerSnapshot, remainingMs: Long) {
-    val remaining = remainingMs.coerceIn(0L, state.durationMs.coerceAtLeast(0L))
-    val secondsTotal = remaining / 1000L + if (remaining % 1000L > 0) 1L else 0L
-    val minutes = (secondsTotal / 60L).toInt()
-    val seconds = (secondsTotal % 60L).toInt()
-    val accessibleTime = stringResource(
-        R.string.timer_description,
-        pluralStringResource(R.plurals.minutes, minutes, minutes),
-        pluralStringResource(R.plurals.seconds, seconds, seconds),
-    )
-    Text(modeLabel(state.mode), style = MaterialTheme.typography.titleLarge)
-    CoffeeCup(
-        fractionRemaining = coffeeFillFraction(state.mode, remaining, state.durationMs),
-        running = state.status == TimerStatus.RUNNING,
-    )
+    val time = timerDisplay(remainingMs, state.durationMs)
+    val accessibleTime = stringResource(R.string.timer_description,
+        pluralStringResource(R.plurals.minutes, time.minutes, time.minutes),
+        pluralStringResource(R.plurals.seconds, time.seconds, time.seconds))
+    Text(modeLabel(state.mode).uppercase(), color = LinuxPalette.Secondary, fontSize = 12.sp,
+        fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, textAlign = TextAlign.Center,
+        modifier = Modifier.testTag("mode_label"))
+    Spacer(Modifier.height(4.dp))
+    Text(stringResource(R.string.session_position, sessionPosition(state)), color = LinuxPalette.Muted,
+        fontSize = 11.sp, modifier = Modifier.testTag("session_label"))
+    Spacer(Modifier.height(12.dp))
     val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        // Fit even 180:00 on narrow screens at large system font sizes; other text can wrap.
-        val timerSize = (maxWidth.value / (6f * 0.66f * fontScale)).coerceAtMost(64f).sp
-        Text(
-            stringResource(R.string.timer_digits, minutes, seconds),
-            fontSize = timerSize,
-            fontWeight = FontWeight.Light,
-            maxLines = 1,
-            modifier = Modifier.clearAndSetSemantics { contentDescription = accessibleTime },
-        )
+        // Normal phones use the exact Linux 68sp. Shrink only when large fonts/narrow space demand it.
+        val digits = if (time.minutes >= 100) 6 else 5
+        val timerSize = minOf(68f, maxWidth.value / (digits * 0.60f * fontScale)).sp
+        Text(stringResource(R.string.timer_digits, time.minutes, time.seconds),
+            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = timerSize,
+                fontWeight = FontWeight.Light, letterSpacing = (-2).sp, fontFeatureSettings = "tnum"),
+            color = LinuxPalette.Text, maxLines = 1,
+            modifier = Modifier.testTag("timer_digits").clearAndSetSemantics { contentDescription = accessibleTime })
     }
-    Text(
-        stringResource(
-            when (state.status) {
-                TimerStatus.IDLE -> R.string.status_idle
-                TimerStatus.RUNNING -> R.string.status_running
-                TimerStatus.PAUSED -> R.string.status_paused
-                TimerStatus.FINISHED -> R.string.status_finished
-            },
-        ),
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-    )
+    Spacer(Modifier.height(18.dp))
+    CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
 }
 
 @Composable
 private fun ModePicker(state: TimerSnapshot, onMode: (TimerMode) -> Unit) {
-    val canChange = state.status != TimerStatus.RUNNING && state.status != TimerStatus.PAUSED
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(R.string.mode_title), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            for (mode in listOf(TimerMode.FOCUS, TimerMode.SHORT_BREAK, TimerMode.LONG_BREAK)) {
-                OutlinedButton(
-                    onClick = { onMode(mode) },
-                    enabled = canChange,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        .semantics { selected = state.mode == mode },
+    val enabled = state.status != TimerStatus.RUNNING && state.status != TimerStatus.PAUSED
+    Row(Modifier.fillMaxWidth().testTag("duration_presets"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (mode in listOf(TimerMode.FOCUS, TimerMode.SHORT_BREAK, TimerMode.LONG_BREAK)) {
+            val isSelected = state.mode == mode
+            val description = stringResource(R.string.mode_duration, modeLabel(mode),
+                (state.settings.durationMs(mode) / 60_000L).toInt())
+            // Linux's 34dp visual sits inside a real 48dp target, without changing its silhouette.
+            Box(Modifier.weight(1f).heightIn(min = 48.dp).testTag("preset_${mode.name}")
+                .selectable(selected = isSelected, enabled = enabled, role = Role.RadioButton, onClick = { onMode(mode) })
+                .semantics { contentDescription = description }, contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.48f),
+                    color = if (isSelected) LinuxPalette.Accent.copy(alpha = 0.28f) else LinuxPalette.Surface,
+                    shape = RoundedCornerShape(10.dp),
+                    border = if (isSelected) BorderStroke(1.dp, LinuxPalette.AccentLight.copy(alpha = 0.45f)) else null,
                 ) {
-                    Text(
-                        stringResource(
-                            if (mode == state.mode) R.string.mode_selected_duration else R.string.mode_duration,
-                            modeLabel(mode), (state.settings.durationMs(mode) / 60000L).toInt(),
-                        ),
-                        textAlign = TextAlign.Center,
-                    )
+                    Text(stringResource(R.string.preset_minutes, (state.settings.durationMs(mode) / 60_000L).toInt()),
+                        modifier = Modifier.heightIn(min = 34.dp).padding(horizontal = 4.dp, vertical = 8.dp),
+                        color = if (isSelected) LinuxPalette.Text else LinuxPalette.Secondary,
+                        fontSize = 12.sp, lineHeight = 18.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, textAlign = TextAlign.Center)
                 }
-            }
-            if (!canChange) {
-                Text(stringResource(R.string.mode_locked), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 }
 
 @Composable
-private fun SettingsScreen(settings: TimerSettings, enabled: Boolean, onCancel: () -> Unit, onSave: (TimerSettings) -> Unit) {
+private fun SettingsScreen(
+    settings: TimerSettings, enabled: Boolean, notifications: Boolean, exactAlarms: Boolean,
+    onNotifications: () -> Unit, onExactAlarms: () -> Unit, onLanguage: (() -> Unit)?,
+    onResetCycle: () -> Unit, onSave: (TimerSettings) -> Unit, modifier: Modifier = Modifier,
+) {
     var focus by rememberSaveable(settings.focusMinutes) { mutableStateOf(settings.focusMinutes.toString()) }
-    var shortBreak by rememberSaveable(settings.shortBreakMinutes) {
-        mutableStateOf(settings.shortBreakMinutes.toString())
-    }
-    var longBreak by rememberSaveable(settings.longBreakMinutes) {
-        mutableStateOf(settings.longBreakMinutes.toString())
-    }
+    var shortBreak by rememberSaveable(settings.shortBreakMinutes) { mutableStateOf(settings.shortBreakMinutes.toString()) }
+    var longBreak by rememberSaveable(settings.longBreakMinutes) { mutableStateOf(settings.longBreakMinutes.toString()) }
     val focusValue = focus.toIntOrNull()
     val shortValue = shortBreak.toIntOrNull()
     val longValue = longBreak.toIntOrNull()
     val valid = validMinutes(focusValue) && validMinutes(shortValue) && validMinutes(longValue)
-    Text(
-        stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium,
-        modifier = Modifier.semantics { heading() },
-    )
-    Text(stringResource(if (enabled) R.string.settings_future_only else R.string.settings_locked), style = MaterialTheme.typography.bodyLarge)
-    DurationField(stringResource(R.string.focus_duration), focus, enabled) { focus = it }
-    DurationField(stringResource(R.string.short_break_duration), shortBreak, enabled) { shortBreak = it }
-    DurationField(stringResource(R.string.long_break_duration), longBreak, enabled) { longBreak = it }
-    Button(
-        onClick = {
-            // Revalidate at the boundary rather than trusting only the disabled button.
-            if (enabled && valid) onSave(TimerSettings(focusValue!!, shortValue!!, longValue!!))
-        },
-        enabled = enabled && valid,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-    ) { Text(stringResource(R.string.save_settings)) }
-    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-        Text(stringResource(R.string.cancel))
+    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).testTag("settings_screen").padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.widthIn(max = 420.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(if (enabled) R.string.settings_future_only else R.string.settings_locked),
+                color = LinuxPalette.Secondary, style = MaterialTheme.typography.bodySmall)
+            DurationField(stringResource(R.string.focus_duration), "duration_focus", focus, enabled) { focus = it }
+            DurationField(stringResource(R.string.short_break_duration), "duration_short", shortBreak, enabled) { shortBreak = it }
+            DurationField(stringResource(R.string.long_break_duration), "duration_long", longBreak, enabled) { longBreak = it }
+            OutlinedButton(onClick = {
+                if (enabled && valid) onSave(TimerSettings(focusValue!!, shortValue!!, longValue!!))
+            }, enabled = enabled && valid, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("save_durations")) {
+                Text(stringResource(R.string.save_settings))
+            }
+            Text(stringResource(R.string.alerts_title), modifier = Modifier.semantics { heading() }, fontWeight = FontWeight.Bold)
+            Text(stringResource(if (notifications) R.string.notifications_enabled else R.string.notifications_disabled),
+                color = LinuxPalette.Secondary, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = onNotifications, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("notification_settings")) {
+                Text(stringResource(R.string.notification_settings), textAlign = TextAlign.Center)
+            }
+            Text(stringResource(if (exactAlarms) R.string.exact_alarms_enabled else R.string.exact_alarms_disabled),
+                color = LinuxPalette.Secondary, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = onExactAlarms, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("exact_alarm_settings")) {
+                Text(stringResource(R.string.exact_alarm_settings), textAlign = TextAlign.Center)
+            }
+            Text(stringResource(R.string.background_limitations), color = LinuxPalette.Muted, style = MaterialTheme.typography.bodySmall)
+            if (onLanguage != null) {
+                OutlinedButton(onClick = onLanguage, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("language_settings")) {
+                    Text(stringResource(R.string.language_settings))
+                }
+            }
+            TextButton(onClick = onResetCycle, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("reset_cycle")) {
+                Text(stringResource(R.string.reset_cycle))
+            }
+        }
     }
 }
 
-private fun validMinutes(value: Int?): Boolean = value != null && value in 1..180
-
 @Composable
-private fun DurationField(label: String, value: String, enabled: Boolean, onValue: (String) -> Unit) {
+private fun DurationField(label: String, tag: String, value: String, enabled: Boolean, onValue: (String) -> Unit) {
     val valid = validMinutes(value.toIntOrNull())
-    OutlinedTextField(
-        value = value,
-        enabled = enabled,
-        onValueChange = { candidate ->
-            if (candidate.length <= 3 && candidate.all { it in '0'..'9' }) onValue(candidate)
-        },
-        label = { Text(label) },
-        supportingText = { Text(stringResource(if (valid) R.string.duration_range else R.string.duration_error)) },
-        isError = !valid,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
-    )
+    OutlinedTextField(value = value, enabled = enabled,
+        onValueChange = { candidate -> if (candidate.length <= 3 && candidate.all { it in '0'..'9' }) onValue(candidate) },
+        label = { Text(label) }, supportingText = { Text(stringResource(if (valid) R.string.duration_range else R.string.duration_error)) },
+        isError = !valid, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth().testTag(tag))
 }
 
 @Composable
-private fun PermissionCard(
-    notifications: Boolean,
-    exactAlarms: Boolean,
-    onNotifications: () -> Unit,
-    onExactAlarms: () -> Unit,
-) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                stringResource(R.string.alerts_title), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text(stringResource(if (notifications) R.string.notifications_enabled else R.string.notifications_disabled))
-            if (!notifications) {
-                OutlinedButton(onClick = onNotifications, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.enable_notifications), textAlign = TextAlign.Center)
-                }
-            }
-            Text(stringResource(if (exactAlarms) R.string.exact_alarms_enabled else R.string.exact_alarms_disabled))
-            if (!exactAlarms) {
-                OutlinedButton(onClick = onExactAlarms, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.enable_exact_alarms), textAlign = TextAlign.Center)
-                }
-            }
-            Text(
-                stringResource(R.string.background_limitations),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun InfoCard(title: String, body: String) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                title, style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading(); liveRegion = LiveRegionMode.Polite },
-            )
-            Text(body)
-        }
-    }
-}
-
-@Composable
-private fun ErrorCard(message: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.error_title), style = MaterialTheme.typography.titleMedium)
-            Text(message)
-        }
-    }
-}
-
-@Composable
-private fun modeLabel(mode: TimerMode): String = stringResource(
-    when (mode) {
-        TimerMode.FOCUS -> R.string.mode_focus
-        TimerMode.SHORT_BREAK -> R.string.mode_short_break
-        TimerMode.LONG_BREAK -> R.string.mode_long_break
-    },
-)
+private fun modeLabel(mode: TimerMode): String = stringResource(when (mode) {
+    TimerMode.FOCUS -> R.string.mode_focus
+    TimerMode.SHORT_BREAK -> R.string.mode_short_break
+    TimerMode.LONG_BREAK -> R.string.mode_long_break
+})

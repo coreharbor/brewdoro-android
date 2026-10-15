@@ -6,3 +6,6 @@
 *.keystore
 /.idea/
 *.iml
+**/__pycache__/
+/screenshots/
+/verified-apk/
