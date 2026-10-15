@@ -18,7 +18,10 @@ Download the debug artifact from a successful Android CI run on GitHub (private 
 - Rotate, background, swipe away, reopen; state must restore from persistent deadlines. Android force-stop is a different case and prevents alarm delivery until launch.
 - Reboot during a timer; verify restored remaining time or one completion, not duplicates.
 - Change wall clock within a boot: timer must remain based on elapsed time.
-- Large text, small screen, portrait/landscape, TalkBack button labels, Russian/English system language.
+- In ordinary landscape (also small 640x360dp at normal font), cup, timer, start/pause, reset and all three duration presets must be fully visible without scrolling. Gear stays accessible; portrait appearance stays unchanged.
+- Rotate a running session portrait → landscape → portrait: remaining time continues from its deadline, not a restarted session. Repeat while paused: time stays frozen and Resume remains available.
+- Open settings, enter an unsaved duration, hide the keyboard and rotate: settings and the draft survive. With large text/very short windows, scroll to all main/settings controls; no horizontal clipping or inaccessible buttons.
+- TalkBack button labels and Russian/English system language in both orientations.
 - Battery saver and OEM restrictions: document any manufacturer-specific delays, do not claim universal delivery.
 
 ## Record observations

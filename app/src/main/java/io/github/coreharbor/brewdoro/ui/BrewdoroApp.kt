@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -131,42 +132,8 @@ fun BrewdoroApp(
                         modifier = Modifier.weight(1f),
                     )
                 } else {
-                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().testTag("minimal_main")) {
-                        val viewportHeight = maxHeight
-                        Column(
-                            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                                .heightIn(min = viewportHeight).padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Column(Modifier.widthIn(max = 296.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                                TimerPanel(state, remainingMs)
-                                Spacer(Modifier.height(26.dp))
-                                OutlinedButton(
-                                    onClick = if (state.status == TimerStatus.RUNNING) onPause else onStart,
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("primary_action"),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, LinuxPalette.AccentLight.copy(alpha = 0.45f)),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = LinuxPalette.Accent.copy(alpha = 0.28f), contentColor = LinuxPalette.Text),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                                ) {
-                                    Text(stringResource(when (state.status) {
-                                        TimerStatus.RUNNING -> R.string.pause
-                                        TimerStatus.PAUSED -> R.string.resume
-                                        TimerStatus.FINISHED -> R.string.start_next_short
-                                        TimerStatus.IDLE -> R.string.start
-                                    }), fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                                }
-                                Spacer(Modifier.height(8.dp))
-                                TextButton(onClick = onResetTimer, modifier = Modifier.heightIn(min = 48.dp).testTag("reset_timer")) {
-                                    Text(stringResource(R.string.reset_short), fontSize = 13.sp, color = LinuxPalette.Muted)
-                                }
-                                Spacer(Modifier.height(28.dp))
-                                ModePicker(state, onMode)
-                            }
-                        }
-                    }
+                    MainTimerScreen(state, remainingMs, onStart, onPause, onResetTimer, onMode,
+                        modifier = Modifier.weight(1f))
                 }
             }
             if (confirmCycleReset) {
@@ -192,19 +159,109 @@ fun BrewdoroApp(
     }
 }
 
+/** Switch on the inset-adjusted viewport, not device orientation (also works in split screen).
+ * The scroll container has zero range when content fits, and is a fallback rather than a
+ * requirement for ordinary landscape. Nothing gets scaled below its 48dp touch target.
+ */
 @Composable
-private fun TimerPanel(state: TimerSnapshot, remainingMs: Long) {
+private fun MainTimerScreen(
+    state: TimerSnapshot, remainingMs: Long, onStart: () -> Unit, onPause: () -> Unit,
+    onResetTimer: () -> Unit, onMode: (TimerMode) -> Unit, modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier.fillMaxWidth().testTag("minimal_main")) {
+        val viewportHeight = maxHeight
+        // 520dp still fits 136dp cup + 24dp gap + 296dp controls + 40dp padding,
+        // leaving room for landscape cutouts on a nominal 640dp-wide display.
+        val sideBySide = maxWidth >= 520.dp && maxWidth > maxHeight
+        Column(
+            Modifier.fillMaxSize().testTag("main_scroll").verticalScroll(rememberScrollState())
+                .heightIn(min = viewportHeight)
+                .padding(horizontal = 20.dp, vertical = if (sideBySide) 8.dp else 0.dp)
+                .then(if (sideBySide) Modifier else Modifier.padding(top = 16.dp, bottom = 32.dp)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            if (sideBySide) {
+                Row(
+                    Modifier.widthIn(max = 640.dp).fillMaxWidth().testTag("compact_main"),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
+                    }
+                    Column(Modifier.width(296.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        TimerReadout(state, remainingMs, compact = true)
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            PrimaryAction(state.status, onStart, onPause, Modifier.weight(1f))
+                            ResetAction(onResetTimer, Modifier.weight(0.65f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        ModePicker(state, onMode)
+                    }
+                }
+            } else {
+                // Keep the Linux-parity portrait layout, including all original spacing.
+                Column(Modifier.widthIn(max = 296.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    TimerReadout(state, remainingMs)
+                    Spacer(Modifier.height(18.dp))
+                    CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
+                    Spacer(Modifier.height(26.dp))
+                    PrimaryAction(state.status, onStart, onPause, Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(8.dp))
+                    ResetAction(onResetTimer)
+                    Spacer(Modifier.height(28.dp))
+                    ModePicker(state, onMode)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrimaryAction(status: TimerStatus, onStart: () -> Unit, onPause: () -> Unit, modifier: Modifier) {
+    OutlinedButton(
+        onClick = if (status == TimerStatus.RUNNING) onPause else onStart,
+        modifier = modifier.heightIn(min = 48.dp).testTag("primary_action"),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LinuxPalette.AccentLight.copy(alpha = 0.45f)),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = LinuxPalette.Accent.copy(alpha = 0.28f), contentColor = LinuxPalette.Text),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(stringResource(when (status) {
+            TimerStatus.RUNNING -> R.string.pause
+            TimerStatus.PAUSED -> R.string.resume
+            TimerStatus.FINISHED -> R.string.start_next_short
+            TimerStatus.IDLE -> R.string.start
+        }), fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun ResetAction(onResetTimer: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(onClick = onResetTimer, modifier = modifier.heightIn(min = 48.dp).testTag("reset_timer")) {
+        Text(stringResource(R.string.reset_short), fontSize = 13.sp, color = LinuxPalette.Muted, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun TimerReadout(state: TimerSnapshot, remainingMs: Long, compact: Boolean = false) {
     val time = timerDisplay(remainingMs, state.durationMs)
     val accessibleTime = stringResource(R.string.timer_description,
         pluralStringResource(R.plurals.minutes, time.minutes, time.minutes),
         pluralStringResource(R.plurals.seconds, time.seconds, time.seconds))
     Text(modeLabel(state.mode).uppercase(), color = LinuxPalette.Secondary, fontSize = 12.sp,
         fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, textAlign = TextAlign.Center,
+        lineHeight = if (compact) 16.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
         modifier = Modifier.testTag("mode_label"))
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
     Text(stringResource(R.string.session_position, sessionPosition(state)), color = LinuxPalette.Muted,
-        fontSize = 11.sp, modifier = Modifier.testTag("session_label"))
-    Spacer(Modifier.height(12.dp))
+        fontSize = 11.sp, lineHeight = if (compact) 16.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
+        modifier = Modifier.testTag("session_label"))
+    Spacer(Modifier.height(if (compact) 2.dp else 12.dp))
     val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         // Normal phones use the exact Linux 68sp. Shrink only when large fonts/narrow space demand it.
@@ -216,8 +273,6 @@ private fun TimerPanel(state: TimerSnapshot, remainingMs: Long) {
             color = LinuxPalette.Text, maxLines = 1,
             modifier = Modifier.testTag("timer_digits").clearAndSetSemantics { contentDescription = accessibleTime })
     }
-    Spacer(Modifier.height(18.dp))
-    CoffeeCup(coffeeFillFraction(state.mode, remainingMs, state.durationMs))
 }
 
 @Composable

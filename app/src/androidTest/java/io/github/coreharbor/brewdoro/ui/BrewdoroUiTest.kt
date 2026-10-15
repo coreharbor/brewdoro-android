@@ -2,6 +2,11 @@
 package io.github.coreharbor.brewdoro.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -9,8 +14,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -37,26 +45,118 @@ class BrewdoroUiTest {
     private var languages = 0
     private var cycleResets = 0
 
-    private fun launch(compact: Boolean = false) {
+    private fun launch(compact: Boolean = false, viewportWidth: Dp? = null, viewportHeight: Dp? = null, fontScale: Float = 1f) {
         compose.setContent {
             val density = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density, if (compact) 2f else 1f)) {
-                Box(if (compact) Modifier.size(280.dp, 360.dp) else Modifier) {
-                    BrewdoroApp(
-                        state = state, remainingMs = state.remainingMs,
-                        notificationEnabled = false, exactAlarmsEnabled = false,
-                        onStart = { state = engine.start(state, now).snapshot },
-                        onPause = { state = engine.pause(state, now).snapshot },
-                        onResetTimer = { state = engine.resetTimer(state, now).snapshot },
-                        onResetCycle = { cycleResets++; state = engine.resetCycle(state, now).snapshot },
-                        onMode = { state = engine.selectMode(state, it, now).snapshot },
-                        onSettings = { state = engine.settings(state, it, now).snapshot },
-                        onNotifications = { notifications++ }, onExactAlarms = { exactAlarms++ },
-                        onLanguage = { languages++ },
-                    )
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                // Fit an explicit logical viewport inside any emulator root, without clipping a
+                // requiredSize bigger than the physical screen. Assertions use real laid-out nodes.
+                val fit = if (viewportWidth != null && viewportHeight != null)
+                    minOf(1f, maxWidth.value / viewportWidth.value, maxHeight.value / viewportHeight.value) else 1f
+                // Half-step densities keep the 48dp targets and original 136 × 86dp cup
+                // on integral pixels even when the host is a portrait emulator.
+                val fittedDensity = if (viewportWidth != null)
+                    (density.density * fit * 2).toInt().coerceAtLeast(1) / 2f else density.density
+                CompositionLocalProvider(LocalDensity provides Density(fittedDensity, if (compact) 2f else fontScale)) {
+                    Box((if (viewportWidth != null && viewportHeight != null) Modifier.size(viewportWidth, viewportHeight)
+                        else if (compact) Modifier.size(280.dp, 360.dp) else Modifier)
+                        .consumeWindowInsets(WindowInsets.safeDrawing).testTag("test_viewport")) {
+                        BrewdoroApp(
+                            state = state, remainingMs = state.remainingMs,
+                            notificationEnabled = false, exactAlarmsEnabled = false,
+                            onStart = { state = engine.start(state, now).snapshot },
+                            onPause = { state = engine.pause(state, now).snapshot },
+                            onResetTimer = { state = engine.resetTimer(state, now).snapshot },
+                            onResetCycle = { cycleResets++; state = engine.resetCycle(state, now).snapshot },
+                            onMode = { state = engine.selectMode(state, it, now).snapshot },
+                            onSettings = { state = engine.settings(state, it, now).snapshot },
+                            onNotifications = { notifications++ }, onExactAlarms = { exactAlarms++ },
+                            onLanguage = { languages++ },
+                        )
+                    }
                 }
             }
         }
+    }
+
+    private fun scrollMaximum(): Float = compose.onNodeWithTag("main_scroll")
+        .fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].maxValue()
+
+    private fun assertFullyInsideViewport(tag: String) {
+        val viewportTag = if (tag == "open_settings" || tag == "close_settings") "test_viewport" else "minimal_main"
+        val viewport = compose.onNodeWithTag(viewportTag).getUnclippedBoundsInRoot()
+        val node = compose.onNodeWithTag(tag).assertIsDisplayed().getUnclippedBoundsInRoot()
+        assertTrue("$tag must be fully on screen, not merely intersect it: $node within $viewport",
+            node.left >= viewport.left - 0.5.dp && node.top >= viewport.top - 0.5.dp &&
+                node.right <= viewport.right + 0.5.dp && node.bottom <= viewport.bottom + 0.5.dp)
+    }
+
+    @Test fun landscapeShowsWholeCupReadoutAndAllControlsWithoutScrolling() {
+        // 760 × 320dp inset-free app content, including the fixed 48dp gear header.
+        launch(viewportWidth = 760.dp, viewportHeight = 320.dp)
+        val idle = TimerSnapshot()
+        val running = engine.start(idle, now).snapshot
+        val paused = engine.pause(running, now).snapshot
+        val finished = engine.reconcile(running,
+            now.copy(wallMs = now.wallMs + idle.durationMs, elapsedMs = now.elapsedMs + idle.durationMs)).snapshot
+        val shortBreak = engine.selectMode(idle, TimerMode.SHORT_BREAK, now).snapshot
+        val longBreak = engine.selectMode(idle, TimerMode.LONG_BREAK, now).snapshot
+        for (snapshot in listOf(idle, running, paused, finished, shortBreak, longBreak)) {
+            compose.runOnIdle { state = snapshot }
+            compose.onNodeWithTag("compact_main").assertExists()
+            assertEquals("Ordinary landscape must not require a scroll", 0f, scrollMaximum(), 0.5f)
+            for (tag in listOf("open_settings", "mode_label", "session_label", "timer_digits", "coffee_cup",
+                "primary_action", "reset_timer", "preset_FOCUS", "preset_SHORT_BREAK", "preset_LONG_BREAK")) {
+                assertFullyInsideViewport(tag)
+            }
+            val cup = compose.onNodeWithTag("coffee_cup").getUnclippedBoundsInRoot()
+            val readout = compose.onNodeWithTag("timer_digits").getUnclippedBoundsInRoot()
+            assertTrue("Cup stays in left column; readout stays right", cup.right < readout.left)
+            compose.onNodeWithTag("coffee_cup").assertWidthIsEqualTo(136.dp).assertHeightIsEqualTo(86.dp)
+            for (tag in listOf("open_settings", "primary_action", "reset_timer", "preset_FOCUS", "preset_SHORT_BREAK", "preset_LONG_BREAK")) {
+                compose.onNodeWithTag(tag).assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+            }
+        }
+        compose.runOnIdle { state = idle }
+        compose.onNodeWithTag("preset_LONG_BREAK").performClick().assertIsSelected()
+        compose.onNodeWithTag("primary_action").performClick()
+        compose.runOnIdle { assertEquals(TimerStatus.RUNNING, state.status) }
+        compose.onNodeWithTag("primary_action").performClick()
+        compose.runOnIdle { assertEquals(TimerStatus.PAUSED, state.status) }
+        compose.onNodeWithTag("reset_timer").performClick()
+        compose.runOnIdle { assertEquals(TimerStatus.IDLE, state.status) }
+    }
+
+    @Test fun veryShortLandscapeFallsBackToScrollWithSettingsStillReachable() {
+        launch(viewportWidth = 760.dp, viewportHeight = 220.dp)
+        assertLandscapeFallback()
+    }
+
+    @Test fun landscapeLargeFontFallsBackToScrollWithoutShrinkingTouchTargets() {
+        launch(viewportWidth = 760.dp, viewportHeight = 300.dp, fontScale = 2f)
+        assertLandscapeFallback()
+    }
+
+    private fun assertLandscapeFallback() {
+        compose.onNodeWithTag("compact_main").assertExists()
+        assertTrue("Overflow must be scrollable, not clipped", scrollMaximum() > 0f)
+        for (tag in listOf("coffee_cup", "mode_label", "session_label", "timer_digits", "primary_action", "reset_timer", "preset_LONG_BREAK")) {
+            compose.onNodeWithTag(tag).performScrollTo()
+            assertFullyInsideViewport(tag)
+        }
+        for (tag in listOf("primary_action", "reset_timer", "preset_FOCUS", "preset_SHORT_BREAK", "preset_LONG_BREAK")) {
+            compose.onNodeWithTag(tag).assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        }
+        compose.onNodeWithTag("preset_LONG_BREAK").performScrollTo().performClick()
+        compose.onNodeWithTag("primary_action").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(TimerStatus.RUNNING, state.status) }
+        assertFullyInsideViewport("open_settings")
+        compose.onNodeWithTag("open_settings").performClick()
+        compose.onNodeWithTag("reset_cycle").performScrollTo().assertIsDisplayed()
+        assertFullyInsideViewport("close_settings")
+        compose.onNodeWithTag("close_settings").performClick()
+        compose.onNodeWithTag("reset_timer").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(TimerStatus.IDLE, state.status) }
     }
 
     @Test fun mainIsMinimalInLinuxOrderWithHorizontalAccessiblePresets() {
