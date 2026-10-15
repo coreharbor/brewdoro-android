@@ -46,7 +46,7 @@ def rotate(landscape):
     raise AssertionError('Emulator rotation did not settle')
 
 def wait_main(language):
-    """Wait for actual app controls; recover only an emulator System UI dialog, never app ANRs."""
+    """Wait for real controls; handle known emulator system dialogs, never application ANRs."""
     label = 'Start' if language == 'en' else 'Начать'
     deadline = time.monotonic() + 45
     system_ui_waits = 0
@@ -57,14 +57,18 @@ def wait_main(language):
         texts = [n.get('text', '') for n in tree.iter('node')]
         if any(n.get('package') == PACKAGE and n.get('text') == label for n in tree.iter('node')):
             return
-        if "System UI isn't responding" in texts and system_ui_waits < 2:
+        system_dialog = next((t for t in texts if t in ("System UI isn't responding", "Pixel Launcher isn't responding")), None)
+        if system_dialog is not None and system_ui_waits < 2:
             wait = next(n for n in tree.iter('node') if n.get('text') == 'Wait')
             x1, y1, x2, y2 = map(int, re.findall('[0-9]+', wait.attrib['bounds']))
             adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
             system_ui_waits += 1
-            print('Hosted emulator System UI ANR: chose Wait; app ANRs are NOT dismissed.', flush=True)
-            (OUT / 'emulator-recovery.txt').write_text('System UI ANR after instrumentation; Wait selected. App ANRs are never dismissed.' + chr(10))
+            print('Hosted emulator dialog: ' + system_dialog + '; chose Wait. App ANRs are NOT dismissed.', flush=True)
+            with (OUT / 'emulator-recovery.txt').open('a') as report:
+                report.write(system_dialog + '; Wait selected on disposable emulator. App ANRs never dismissed.' + chr(10))
         elif any("isn't responding" in text for text in texts):
+            (OUT / 'unrecovered-anr.xml').write_bytes(xml)
+            (OUT / 'unrecovered-anr.png').write_bytes(png())
             raise AssertionError(('Unrecovered ANR', texts))
         time.sleep(.5)
     (OUT / 'not-ready.xml').write_bytes(xml)
