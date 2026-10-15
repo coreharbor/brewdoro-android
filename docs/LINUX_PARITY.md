@@ -21,6 +21,10 @@ Use exact Linux palette: background #24283b, header #1f2335, surface #292e42, pr
 
 Keep duration settings, permission state and Android-specific background limitations behind the gear, accessible even during a session; only duration editing is locked. Keep cycle-reset confirmation there or reproduce the contextual reset behavior without adding a second reset action to main. Keep the tested timer/repository/receivers untouched. No backend, extra analytics or permission changes.
 
+## Automatic-cycle follow-up (0.1.3)
+
+Subsequent explicit user request supersedes the visual-only scope above: repeat Linux window.py/cycle.py session switching, including automatic next-stage start. Domain/repository/notification changes are now in scope and covered by109 JVM tests and15 UI tests. Cycle and autostart default ON on Android by request (Linux defaults OFF); settings provide both switches and lock timer editing during running/paused phases. Real foreground and Activity-stopped receiver deadlines are tested. Original colors/portrait/landscape remain unchanged.
+
 ## Verification and delivery
 
 Increment Android versionCode/versionName. Existing previews use ephemeral debug keys; if the signer differs, say a reinstall may be required instead of promising in-place upgrade.

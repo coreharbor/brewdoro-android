@@ -1,3 +1,18 @@
+# Automatic-cycle preview 0.1.3 verification
+
+- Verified source: `72a255e8c94223f68e6a971a9824bd8332f48aa5`. [Full passing CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38720137951).
+- 109/109 JVM and 15/15 Android instrumentation tests: zero failures, errors or skips. Lint: zero errors/fatal issues, 37 non-fatal warnings. App and instrumentation compile before emulator boot.
+- Android16/API36 Pixel5-profile x86_64 emulator: actual60s focus automatically starts short break in foreground, then actual60s break automatically starts focus with Activity CREATED and UI refresh stopped. No manual next-stage tap, injected completion, fake receiver broadcast or reconcile in wait predicate. Both completion notifications observed; full60s successor and its committed snapshot verified; pause/reset still work on return. Retained log evidence: elapsedMs=120066. Physical phone/Doze/OEM behavior remains pending.
+- Linux window.py _show_finished and cycle.py parity: fourth focus chooses long break, long break resets count, auto-start uses a fresh full duration at observed expiry. Delayed callbacks never fabricate catch-up phases. Android intentionally defaults cycle/autostart ON per user request; Linux ships them OFF. Gear can disable autostart (select next idle) or cycle (finish in place).
+- V2 snapshot codec strictly validates booleans; V1 snapshots retain session fields with new defaults. Legacy FINISHED remains inert until explicit Start. Atomic persist → successor schedule → completion alert; duplicate alarms/ticks do not count or notify twice or withdraw the last alert. Phase-bound Pause protects a newly started successor from a stale UI click.
+- APK: 10,233,794 bytes; SHA256 `15549c4fc0ec5f90e9cfa4d7bb9ce1cedc7e41b8839348b6c1e958368c49afa0`. ZIP CRC integrity and downloaded CI checksum match. Official apksigner verified v2, one RSA2048 debug signer.
+- Certificate SHA256 `60fa7b7f6730222d6033bd1bb0ee78f468de04a411365f0e8b6b87725163f66e` differs from0.1.2 (`e6b03a08d25129fb4f109293a9f543475538966689622e8912b26e77d8eb2518`): uninstall older preview first, losing local session/settings. No stable production key or upgrade channel is claimed.
+- Manifest: io.github.coreharbor.brewdoro, versionName0.1.3/versionCode4, min26/target35.
+- Exact downloadable APK reinstalled after instrumentation; actual EN/RU portrait/landscape, compact640x360dp, font1.5 and RU settings captured. Inspected cycle/autostart defaults ON, original minimal portrait, compact landscape fit, large-font stacked full-width action labels. Existing rotation/recreation tests retain running/paused state and unsaved settings drafts including both switches.
+- Earlier attempts caught an asynchronous test assertion before Activity rendered the committed successor, and UTP uninstalling the target before private evidence retrieval. Fixed the test to await successor semantics; retained evidence through logcat and content-gated it (adb shell exit status alone can falsely report success). Final complete run passed with the evidence assertion enabled.
+
+---
+
 # Landscape preview 0.1.2 verification
 
 - Source: `e802c01965ba94df96bc75f3acdade2095a2873f`. [Full passing CI](https://github.com/coreharbor/brewdoro-android/actions/runs/38712263952).
