@@ -105,7 +105,14 @@ try:
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')  # Hide the numeric keyboard.
     # Cross-app picker test runs outside Compose/Espresso so the system owns accessibility normally.
     def private_state(name):
-        return adb('exec-out', 'run-as', PACKAGE, 'cat', 'shared_prefs/' + name + '.xml')
+        result = subprocess.run(ADB + ['exec-out', 'run-as', PACKAGE, 'cat', 'shared_prefs/' + name + '.xml'],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
+        # Fresh defaults need not have a file yet; absence before/after is meaningful state.
+        if b'No such file or directory' in result.stdout:
+            return None
+        assert result.returncode == 0, result.stdout.decode(errors='replace')
+        ET.fromstring(result.stdout)  # Never accept run-as/shell error text as a valid snapshot.
+        return result.stdout
     comfort_before = private_state('comfort')
     timer_before = private_state('timer')
     tap(find(lambda n: n.get('resource-id', '').split('/')[-1] == 'completion_sound', scroll=True))
