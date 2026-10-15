@@ -138,7 +138,7 @@ class BrewdoroUiTest {
         val primary = compose.onNodeWithTag("primary_action").getUnclippedBoundsInRoot()
         val reset = compose.onNodeWithTag("reset_timer").getUnclippedBoundsInRoot()
         assertTrue("Large-font labels use full-width stacked actions", primary.bottom <= reset.top)
-        assertEquals(primary.width.value, reset.width.value, 0.5f)
+        assertEquals((primary.right - primary.left).value, (reset.right - reset.left).value, 0.5f)
     }
 
     private fun assertLandscapeFallback() {
