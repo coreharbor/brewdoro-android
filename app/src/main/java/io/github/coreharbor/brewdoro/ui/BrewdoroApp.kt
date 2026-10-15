@@ -193,10 +193,18 @@ private fun MainTimerScreen(
                     Column(Modifier.width(296.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         TimerReadout(state, remainingMs, compact = true)
                         Spacer(Modifier.height(8.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            PrimaryAction(state.status, onStart, onPause, Modifier.weight(1f))
-                            ResetAction(onResetTimer, Modifier.weight(0.65f))
+                        if (LocalDensity.current.fontScale > 1.2f) {
+                            // At accessibility font sizes keep whole RU labels readable rather
+                            // than breaking the last letter into a narrow side-by-side button.
+                            PrimaryAction(state.status, onStart, onPause, Modifier.fillMaxWidth())
+                            Spacer(Modifier.height(4.dp))
+                            ResetAction(onResetTimer, Modifier.fillMaxWidth())
+                        } else {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                PrimaryAction(state.status, onStart, onPause, Modifier.weight(1f))
+                                ResetAction(onResetTimer, Modifier.weight(0.65f))
+                            }
                         }
                         Spacer(Modifier.height(8.dp))
                         ModePicker(state, onMode)
