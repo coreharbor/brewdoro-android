@@ -138,7 +138,11 @@ try:
     launch()
     rotate(True)
     wait_main('ru')
-    capture('main-landscape-large-font-ru')
+    _, (w, h) = capture('main-landscape-large-font-ru')
+    adb('shell', 'input', 'swipe', str(3*w//4), str(4*h//5), str(3*w//4), str(h//3), '400')
+    time.sleep(.5)
+    tree, size = capture('main-landscape-large-font-scrolled-ru')
+    assert_main_visible(tree, size, 'ru')
     (OUT / 'device.txt').write_text(
         adb('shell', 'getprop', 'ro.build.version.release').decode() +
         'API ' + adb('shell', 'getprop', 'ro.build.version.sdk').decode() +
