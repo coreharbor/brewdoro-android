@@ -148,11 +148,19 @@ class MainActivityComfortTest {
         }
         val pickerPackage = resolved.lineSequence().lastOrNull { it.contains("/") }?.substringBefore("/")?.trim()
         assertNotNull("System ringtone picker must resolve: $resolved", pickerPackage)
+        fun pickerOwnsWindow(): Boolean {
+            val windows = automation.executeShellCommand("dumpsys window windows").use { descriptor ->
+                java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes().toString(Charsets.UTF_8) }
+            }
+            return windows.lineSequence().any {
+                it.contains("mCurrentFocus=") && it.contains("$pickerPackage/")
+            }
+        }
+        android.util.Log.i("BrewdoroPicker", "Resolved external picker: $resolved")
         compose.onNodeWithTag("completion_sound").performScrollTo().performClick()
         compose.waitUntil(20_000) {
             // A transient launcher/system window and PAUSED caller do not prove picker readiness.
-            automation.rootInActiveWindow?.packageName?.toString() == pickerPackage &&
-                scenario.state != Lifecycle.State.RESUMED
+            pickerOwnsWindow() && scenario.state != Lifecycle.State.RESUMED
         }
         automation.waitForIdle(500, 5000)
         automation.executeShellCommand("input keyevent KEYCODE_BACK").use {
@@ -163,7 +171,7 @@ class MainActivityComfortTest {
         } catch (timeout: androidx.compose.ui.test.ComposeTimeoutException) {
             // Some system pickers consume the first Back to hide their own IME.
             // Only back again while that exact resolved picker still owns the window.
-            assertEquals(pickerPackage, automation.rootInActiveWindow?.packageName?.toString())
+            assertTrue("Only the resolved system picker may receive a second Back", pickerOwnsWindow())
             automation.executeShellCommand("input keyevent KEYCODE_BACK").use { descriptor ->
                 java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
             }
